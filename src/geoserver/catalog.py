@@ -350,6 +350,9 @@ class Catalog(object):
         return UnsavedWmsStore(self, name, workspace, user, password)
 
     def create_wmslayer(self, workspace, store, name, nativeName=None):
+        '''
+            TODO:[*] 20-03-04 在Catalog中并不存在直接 create layer的方法
+        '''
         headers = {
             "Content-type": "text/xml",
             "Accept": "application/xml"
@@ -872,6 +875,9 @@ class Catalog(object):
         Resources include feature stores, coverage stores and WMS stores, however does not include layer groups.
         names, stores and workspaces can be provided as a comma delimited strings or as arrays, and are used for filtering.
         Will always return an array.
+        资源包括特性库、覆盖库和WMS库，但是不包括层组。
+        名称、存储和工作区可以作为逗号分隔的字符串或数组提供，并用于筛选。
+        将始终返回一个数组。
         '''
 
         stores = self.get_stores(
