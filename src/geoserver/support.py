@@ -191,12 +191,16 @@ def write_metadata(name):
 
 
 class ResourceInfo(object):
+    '''
+        TODO:[*] 20-03-09 ?
+    '''
 
     def __init__(self):
         self.dom = None
         self.dirty = dict()
 
     def fetch(self):
+        # TODO:[*] 20-03-09 此处的self.href是什么？
         self.dom = self.catalog.get_xml(self.href)
 
     def clear(self):

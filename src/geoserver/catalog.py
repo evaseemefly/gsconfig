@@ -49,7 +49,6 @@ try:
 except ImportError:
     JSONDecodeError = ValueError
 
-
 logger = logging.getLogger("gsconfig.catalog")
 
 
@@ -100,7 +99,8 @@ class Catalog(object):
     - Namespaces, which provide unique identifiers for resources
     """
 
-    def __init__(self, service_url, username="admin", password="geoserver", validate_ssl_certificate=True, access_token=None):
+    def __init__(self, service_url, username="admin", password="geoserver", validate_ssl_certificate=True,
+                 access_token=None):
         self.service_url = service_url.strip("/")
         self.username = username
         self.password = password
@@ -128,16 +128,19 @@ class Catalog(object):
         self.client.verify = self.validate_ssl_certificate
         parsed_url = urlparse(self.service_url)
         retry = Retry(
-            total = 6,
-            status = 6,
-            backoff_factor = 0.9,
-            status_forcelist = [502, 503, 504],
-            method_whitelist = set(['HEAD', 'TRACE', 'GET', 'PUT', 'POST', 'OPTIONS', 'DELETE'])
+            total=6,
+            status=6,
+            backoff_factor=0.9,
+            status_forcelist=[502, 503, 504],
+            method_whitelist=set(['HEAD', 'TRACE', 'GET', 'PUT', 'POST', 'OPTIONS', 'DELETE'])
         )
 
         self.client.mount("{}://".format(parsed_url.scheme), HTTPAdapter(max_retries=retry))
 
-    def http_request(self, url, data=None, method='get', headers = {}):
+    def http_request(self, url, data=None, method='get', headers={}):
+        '''
+            TODO:[-] 主要是和认证有关系
+        '''
         req_method = getattr(self.client, method.lower())
 
         if self.access_token:
@@ -344,7 +347,7 @@ class Catalog(object):
             workspace = self.get_default_workspace()
         return UnsavedDataStore(self, name, workspace)
 
-    def create_wmsstore(self, name, workspace = None, user = None, password = None):
+    def create_wmsstore(self, name, workspace=None, user=None, password=None):
         if workspace is None:
             workspace = self.get_default_workspace()
         return UnsavedWmsStore(self, name, workspace, user, password)
@@ -373,12 +376,13 @@ class Catalog(object):
         self._cache.clear()
         return self.get_layer(name)
 
-    def add_data_to_store(self, store, name, data, workspace=None, overwrite = False, charset = None):
+    def add_data_to_store(self, store, name, data, workspace=None, overwrite=False, charset=None):
         if isinstance(store, basestring):
             store = self.get_stores(names=store, workspaces=workspace)[0]
         if workspace is not None:
             workspace = _name(workspace)
-            assert store.workspace.name == workspace, "Specified store (%s) is not in specified workspace (%s)!" % (store, workspace)
+            assert store.workspace.name == workspace, "Specified store (%s) is not in specified workspace (%s)!" % (
+                store, workspace)
         else:
             workspace = store.workspace.name
         store = store.name
@@ -415,7 +419,8 @@ class Catalog(object):
                 data = f.read()
                 resp = self.http_request(upload_url, method='put', data=data, headers=headers)
                 if resp.status_code != 201:
-                    FailedRequestError('Failed to add data to store {} : {}, {}'.format(store, resp.status_code, resp.text))
+                    FailedRequestError(
+                        'Failed to add data to store {} : {}, {}'.format(store, resp.status_code, resp.text))
                 self._cache.clear()
         finally:
             # os.unlink(bundle)
@@ -462,7 +467,8 @@ class Catalog(object):
         try:
             resp = self.http_request(url, method='put', data=file_obj, headers=headers)
             if resp.status_code != 201:
-                FailedRequestError('Failed to create FeatureStore {} : {}, {}'.format(name, resp.status_code, resp.text))
+                FailedRequestError(
+                    'Failed to create FeatureStore {} : {}, {}'.format(name, resp.status_code, resp.text))
             self._cache.clear()
         finally:
             file_obj.close()
@@ -531,8 +537,10 @@ class Catalog(object):
         return self.get_stores(names=name, workspaces=workspace)[0]
 
     def create_coveragestore(self, name, workspace=None, path=None, type='GeoTIFF',
-                             create_layer=True, layer_name=None, source_name=None, upload_data=False, contet_type="image/tiff"):
+                             create_layer=True, layer_name=None, source_name=None, upload_data=False,
+                             contet_type="image/tiff"):
         """
+        TODO:[-] 目前看支持的type不包含nc
         Create a coveragestore for locally hosted rasters.
         If create_layer is set to true, will create a coverage/layer.
         layer_name and source_name are only used if create_layer ia enabled. If not specified, the raster name will be used for both.
@@ -589,7 +597,8 @@ class Catalog(object):
                 resp = self.http_request(url, method='post', data=data, headers=headers)
                 if resp.status_code != 201:
                     FailedRequestError('Failed to create coverage/layer {} for : {}, {}'.format(layer_name, name,
-                                                                                                resp.status_code, resp.text))
+                                                                                                resp.status_code,
+                                                                                                resp.text))
                 self._cache.clear()
                 return self.get_resources(names=layer_name, workspaces=workspace)[0]
         else:
@@ -614,7 +623,9 @@ class Catalog(object):
                 data.close()
 
             if resp.status_code != 201:
-                FailedRequestError('Failed to create coverage/layer {} for : {}, {}'.format(layer_name, name, resp.status_code, resp.text))
+                FailedRequestError(
+                    'Failed to create coverage/layer {} for : {}, {}'.format(layer_name, name, resp.status_code,
+                                                                             resp.text))
 
         return self.get_stores(names=name, workspaces=workspace)[0]
 
@@ -662,7 +673,8 @@ class Catalog(object):
         try:
             resp = self.http_request(url, method='post', data=upload_data, headers=headers)
             if resp.status_code != 202:
-                FailedRequestError('Failed to add granule to mosaic {} : {}, {}'.format(store, resp.status_code, resp.text))
+                FailedRequestError(
+                    'Failed to add granule to mosaic {} : {}, {}'.format(store, resp.status_code, resp.text))
             self._cache.clear()
         finally:
             if hasattr(upload_data, "close"):
@@ -709,7 +721,8 @@ class Catalog(object):
 
         resp = self.http_request(url, method='delete', headers=headers)
         if resp.status_code != 200:
-            FailedRequestError('Failed to delete granule from mosaic {} : {}, {}'.format(store, resp.status_code, resp.text))
+            FailedRequestError(
+                'Failed to delete granule from mosaic {} : {}, {}'.format(store, resp.status_code, resp.text))
         self._cache.clear()
 
         # maybe return a list of all granules?
@@ -758,7 +771,8 @@ class Catalog(object):
 
         resp = self.http_request(url, headers=headers)
         if resp.status_code != 200:
-            FailedRequestError('Failed to list granules in mosaic {} : {}, {}'.format(store, resp.status_code, resp.text))
+            FailedRequestError(
+                'Failed to list granules in mosaic {} : {}, {}'.format(store, resp.status_code, resp.text))
 
         self._cache.clear()
         return resp.json()
@@ -881,8 +895,8 @@ class Catalog(object):
         '''
 
         stores = self.get_stores(
-            names = stores,
-            workspaces = workspaces
+            names=stores,
+            workspaces=workspaces
         )
 
         resources = []
@@ -926,7 +940,7 @@ class Catalog(object):
                 if ":" in resource:
                     ws_name, resource = resource.split(':')
 
-            resource = self.get_resources(names = resource)[0]
+            resource = self.get_resources(names=resource)[0]
         layers_url = "{}/layers.xml".format(self.service_url)
         data = self.get_xml(layers_url)
         lyrs = [Layer(self, l.find("name").text) for l in data.findall("layer")]
@@ -991,8 +1005,8 @@ class Catalog(object):
         layergroups = self.get_layergroups(names=name, workspaces=workspace)
         return self._return_first_item(layergroups)
 
-    def create_layergroup(self, name, layers = (), styles = (), bounds = None, mode = "SINGLE", abstract = None,
-                          title = None, workspace = None):
+    def create_layergroup(self, name, layers=(), styles=(), bounds=None, mode="SINGLE", abstract=None,
+                          title=None, workspace=None):
         if self.get_layergroups(names=name, workspaces=workspace):
             raise ConflictingDataError("LayerGroup named %s already exists!" % name)
         else:
@@ -1055,7 +1069,7 @@ class Catalog(object):
         styles = self.get_styles(names=name, workspaces=workspace)
         return self._return_first_item(styles)
 
-    def create_style(self, name, data, overwrite = False, workspace=None, style_format="sld10", raw=False):
+    def create_style(self, name, data, overwrite=False, workspace=None, style_format="sld10", raw=False):
         styles = self.get_styles(names=name, workspaces=workspace)
         if len(styles) > 0:
             style = styles[0]
@@ -1094,6 +1108,9 @@ class Catalog(object):
         self._cache.pop(style.body_href, None)
 
     def create_workspace(self, name, uri):
+        '''
+            TODO:[-] 20-03-09 提交netcdf的操作可以参考此方法，实际也是将xml拼接之后 post
+        '''
         xml = (
             "<namespace>"
             "<prefix>{name}</prefix>"
@@ -1139,12 +1156,18 @@ class Catalog(object):
           returns a single workspace object.
           Will return None if no workspace is found.
           Will raise an error if more than one workspace with the same name is found.
+          返回单个工作空间对象。
+          如果找不到工作空间，将返回None。
+          如果找到多个具有相同名称的工作空间，将引发错误。
         '''
 
         workspaces = self.get_workspaces(names=name)
         return self._return_first_item(workspaces)
 
     def get_default_workspace(self):
+        '''
+            获取默认的工作空间
+        '''
         ws = Workspace(self, "default")
         # must fetch and resolve the 'real' workspace from the response
         ws.fetch()
@@ -1161,7 +1184,8 @@ class Catalog(object):
 
             resp = self.http_request(default_workspace_url, method='put', data=data, headers=headers)
             if resp.status_code not in (200, 201, 202):
-                FailedRequestError('Failed to set default workspace {} : {}, {}'.format(name, resp.status_code, resp.text))
+                FailedRequestError(
+                    'Failed to set default workspace {} : {}, {}'.format(name, resp.status_code, resp.text))
 
             self._cache.pop(default_workspace_url, None)
             self._cache.pop("{}/workspaces.xml".format(self.service_url), None)
@@ -1179,7 +1203,8 @@ class Catalog(object):
         workspace = _name(workspace)
         store = _name(store)
 
-        url = "{}/workspaces/{}/datastores/{}/featuretypes.json?list={}".format(self.service_url, workspace, store, filter)
+        url = "{}/workspaces/{}/datastores/{}/featuretypes.json?list={}".format(self.service_url, workspace, store,
+                                                                                filter)
         resp = self.http_request(url)
         if resp.status_code != 200:
             FailedRequestError('Failed to query feature_type_names')
@@ -1196,13 +1221,15 @@ class Catalog(object):
             return [fn['name'] for fn in data]
         elif filter == 'all':
             feature_type_names = []
-            url = "{}/workspaces/{}/datastores/{}/featuretypes.json?list=available".format(self.service_url, workspace, store)
+            url = "{}/workspaces/{}/datastores/{}/featuretypes.json?list=available".format(self.service_url, workspace,
+                                                                                           store)
             resp = self.http_request(url)
             if resp.status_code != 200:
                 FailedRequestError('Failed to query feature_type_names')
             feature_type_names.extend(resp.json()['list']['string'])
 
-            url = "{}/workspaces/{}/datastores/{}/featuretypes.json?list=configured".format(self.service_url, workspace, store)
+            url = "{}/workspaces/{}/datastores/{}/featuretypes.json?list=configured".format(self.service_url, workspace,
+                                                                                            store)
             resp = self.http_request(url)
             if resp.status_code != 200:
                 FailedRequestError('Failed to query feature_type_names')
