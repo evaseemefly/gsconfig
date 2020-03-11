@@ -33,6 +33,8 @@ import requests
 from requests.packages.urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 
+from typing import List
+
 try:
     from past.builtins import basestring
 except ImportError:
@@ -99,9 +101,10 @@ class Catalog(object):
     - Namespaces, which provide unique identifiers for resources
     """
 
-    def __init__(self, service_url, username="admin", password="geoserver", validate_ssl_certificate=True,
+    def __init__(self, service_url: str, username="admin", password="geoserver", validate_ssl_certificate=True,
                  access_token=None):
-        self.service_url = service_url.strip("/")
+        # TODO:[*] 注意一下此处的 service_url 由 str 被拆分为 数组
+        self.service_url: List[str] = service_url.strip("/")
         self.username = username
         self.password = password
         self.validate_ssl_certificate = validate_ssl_certificate
@@ -228,6 +231,7 @@ class Catalog(object):
         return (resp)
 
     def get_xml(self, rest_url):
+        # TODO:[*]
         cached_response = self._cache.get(rest_url)
 
         def is_valid(cached_response):
@@ -935,6 +939,9 @@ class Catalog(object):
             return None
 
     def get_layers(self, resource=None):
+        '''
+            TODO:[*] 此处调用了 self.get_xml
+        '''
         if isinstance(resource, basestring):
             if self.get_short_version() >= "2.13":
                 if ":" in resource:

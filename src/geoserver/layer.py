@@ -105,6 +105,7 @@ def _write_alternate_styles(builder, styles):
 class Layer(ResourceInfo):
     def __init__(self, catalog, name):
         super(Layer, self).__init__()
+        # TODO:[-] 在所有实现类的构造函数中定义 catalog
         self.catalog = catalog
         self.name = name
         self.gs_version = self.catalog.get_short_version()
@@ -118,6 +119,9 @@ class Layer(ResourceInfo):
 
     @property
     def resource(self):
+        '''
+            TODO:[*] 何用？
+        '''
         if self.dom is None:
             self.fetch()
         name = self.dom.find("resource/name").text

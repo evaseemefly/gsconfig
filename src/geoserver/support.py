@@ -192,7 +192,7 @@ def write_metadata(name):
 
 class ResourceInfo(object):
     '''
-        TODO:[*] 20-03-09 ?
+        TODO:[-] 20-03-09 需要由所有继承的子类实现一些方法，eg: href 等
     '''
 
     def __init__(self):
@@ -200,7 +200,10 @@ class ResourceInfo(object):
         self.dirty = dict()
 
     def fetch(self):
-        # TODO:[*] 20-03-09 此处的self.href是什么？
+        # TODO:[-] 20-03-09 此处的self.href是什么？ self.catalog在哪里声明？
+        # 注意看一下 layer line 105 继承自 ResourceInfo ，里面实现了 href 方法(property)
+        # 调用时直接调用父类中的fetch 方法 获取对应的xml
+        # self.catalog 在继承类中实现 eg: layer line 108
         self.dom = self.catalog.get_xml(self.href)
 
     def clear(self):
