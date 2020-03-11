@@ -130,6 +130,9 @@ def write_string(name):
 
 
 def write_bool(name):
+    '''
+        TODO:[*] 20-03-11 没太看懂，在所有的store中都定影了writers中调用
+    '''
     def write(builder, b):
         builder.start(name, dict())
         builder.data("true" if b and b != "false" else "false")
@@ -195,8 +198,10 @@ class ResourceInfo(object):
         TODO:[-] 20-03-09 需要由所有继承的子类实现一些方法，eg: href 等
     '''
 
+    # TODO:[-] 20-03-11 # 所有继承自ResourceInfo 的子类都需要声明 save_method 方法，用来指明 request的请求类型
     def __init__(self):
         self.dom = None
+        # TODO:[*] 20-03-11 这个字典何用，被子类update
         self.dirty = dict()
 
     def fetch(self):

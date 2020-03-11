@@ -10,6 +10,7 @@ __license__ = "MIT"
 
 from geoserver.support import ResourceInfo, xml_property, write_bool, workspace_from_url
 from geoserver.style import Style
+from geoserver.catalog import Catalog
 
 
 class _attribution(object):
@@ -103,7 +104,7 @@ def _write_alternate_styles(builder, styles):
 
 
 class Layer(ResourceInfo):
-    def __init__(self, catalog, name):
+    def __init__(self, catalog: Catalog, name: str):
         super(Layer, self).__init__()
         # TODO:[-] 在所有实现类的构造函数中定义 catalog
         self.catalog = catalog
@@ -207,9 +208,9 @@ class Layer(ResourceInfo):
     attribution = property(_get_attr_attribution, _set_attr_attribution)
 
     writers = dict(
-        attribution = _write_attribution,
-        enabled = write_bool("enabled"),
-        advertised = write_bool("advertised"),
-        default_style = _write_default_style,
-        alternate_styles = _write_alternate_styles
+        attribution=_write_attribution,
+        enabled=write_bool("enabled"),
+        advertised=write_bool("advertised"),
+        default_style=_write_default_style,
+        alternate_styles=_write_alternate_styles
     )

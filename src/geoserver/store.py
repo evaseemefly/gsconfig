@@ -194,6 +194,11 @@ class CoverageStore(ResourceInfo):
 
 
 class UnsavedCoverageStore(CoverageStore):
+    '''
+        未存储的 coverage store
+    '''
+
+    # 所有继承自ResourceInfo 的子类都需要声明 save_method 方法，用来指明 request的请求类型
     save_method = "POST"
 
     def __init__(self, catalog, name, workspace):

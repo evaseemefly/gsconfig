@@ -270,6 +270,8 @@ class Catalog(object):
 
     def save(self, obj, content_type="application/xml"):
         """
+        TODO:[*] 何用？
+                只有在 Catalog -> create_coveragestore -> self.save中调用
         saves an object to the REST service
         gets the object's REST location and the data from the object,
         then POSTS the request.
