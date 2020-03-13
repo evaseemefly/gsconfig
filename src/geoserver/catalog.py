@@ -27,7 +27,7 @@ from geoserver.layergroup import LayerGroup, UnsavedLayerGroup
 from geoserver.workspace import workspace_from_index, Workspace
 import os
 import re
-from xml.etree.ElementTree import XML
+from xml.etree.ElementTree import XML, Element
 from xml.parsers.expat import ExpatError
 import requests
 from requests.packages.urllib3.util.retry import Retry
@@ -111,6 +111,7 @@ class Catalog(object):
         self.access_token = access_token
         self.setup_connection()
 
+        # TODO:[*] 何用？缓存
         self._cache = {}
         self._version = None
 
@@ -231,13 +232,20 @@ class Catalog(object):
         return (resp)
 
     def get_xml(self, rest_url):
+        '''
+            大体的思路就是讲 rest_url中的 response.content 转换为xml对象 Element
+        '''
         # TODO:[*]
         cached_response = self._cache.get(rest_url)
 
         def is_valid(cached_response):
             return cached_response is not None and datetime.now() - cached_response[0] < timedelta(seconds=5)
 
-        def parse_or_raise(xml):
+        def parse_or_raise(xml: str):
+            '''
+                将传入的xml_str 转成xml 对象
+
+            '''
             try:
                 return XML(xml)
             except (ExpatError, SyntaxError) as e:
@@ -249,8 +257,15 @@ class Catalog(object):
             raw_text = cached_response[1]
             return parse_or_raise(raw_text)
         else:
+            # 做一个认证
             resp = self.http_request(rest_url)
             if resp.status_code == 200:
+                #
+                '''
+                    content:
+                    b'<workspaces>\n  <workspace>\n    <name>cite</name>\n    <atom:link xmlns:atom="http://www.w3.org/2005/Atom" rel="alternate" href="http://localhost:8082/geoserver/rest/workspaces/cite.xml" type="application/atom+xml"/>\n  </workspace>\n  <workspace>\n    <name>tiger</name>\n    <atom:link xmlns:atom="http://www.w3.org/2005/Atom" rel="alternate" href="http://localhost:8082/geoserver/rest/workspaces/tiger.xml" type="application/atom+xml"/>\n  </workspace>\n  <workspace>\n    <name>nurc</name>\n    <atom:link xmlns:atom="http://www.w3.org/2005/Atom" rel="alternate" href="http://localhost:8082/geoserver/rest/workspaces/nurc.xml" type="application/atom+xml"/>\n  </workspace>\n  <workspace>\n    <name>sde</name>\n    <atom:link xmlns:atom="http://www.w3.org/2005/Atom" rel="alternate" href="http://localhost:8082/geoserver/rest/workspaces/sde.xml" type="application/atom+xml"/>\n  </workspace>\n  <workspace>\n    <name>it.geosolutions</name>\n    <atom:link xmlns:atom="http://www.w3.org/2005/Atom" rel="alternate" href="http://localhost:8082/geoserver/rest/workspaces/it.geosolutions.xml" type="application/atom+xml"/>\n  </workspace>\n  <workspace>\n    <name>topp</name>\n    <atom:link xmlns:atom="http://www.w3.org/2005/Atom" rel="alternate" href="http://localhost:8082/geoserver/rest/workspaces/topp.xml" type="application/atom+xml"/>\n  </workspace>\n  <workspace>\n    <name>sf</name>\n    <atom:link xmlns:atom="http://www.w3.org/2005/Atom" rel="alternate" href="http://localhost:8082/geoserver/rest/workspaces/sf.xml" type="application/atom+xml"/>\n  </workspace>\n  <workspace>\n    <name>my_test_2</name>\n    <atom:link xmlns:atom="http://www.w3.org/2005/Atom" rel="alternate" href="http://localhost:8082/geoserver/rest/workspaces/my_test_2.xml" type="application/atom+xml"/>\n  </workspace>\n  <workspace>\n    <name>my_test</name>\n    <atom:link xmlns:atom="http://www.w3.org/2005/Atom" rel="alternate" href="http://localhost:8082/geoserver/rest/workspaces/my_test.xml" type="application/atom+xml"/>\n  </workspace>\n  <workspace>\n    <name>SearchRescue</name>\n    <atom:link xmlns:atom="http://www.w3.org/2005/Atom" rel="alternate" href="http://localhost:8082/geoserver/rest/workspaces/SearchRescue.xml" type="application/atom+xml"/>\n  </workspace>\n</workspaces>'
+                '''
+                # 将 rest_url 作为 key，response.content作为val 存储在_cache字典中
                 self._cache[rest_url] = (datetime.now(), resp.content)
                 return parse_or_raise(resp.content)
             else:
@@ -270,13 +285,19 @@ class Catalog(object):
 
     def save(self, obj, content_type="application/xml"):
         """
-        TODO:[*] 何用？
+        TODO:[-] 20-03-13 将message xml->str，并提交 geoserver rest
                 只有在 Catalog -> create_coveragestore -> self.save中调用
+                在 create_coveragestore 使用中，调用了save方法，传入的obj是要被存储(也就是提交到geoserver rest)的对象
+                此时的obj是 UnsavedCoverageStore
+                将具体实现的store 获取message (由父类 ResourceInfo 实现message 方法)
         saves an object to the REST service
         gets the object's REST location and the data from the object,
         then POSTS the request.
         """
+
+        # 'http://localhost:8082/geoserver/rest/workspaces/my_test_2/coveragestores?name=nmefc_2016072112_opdr_02'
         rest_url = obj.href
+        #
         data = obj.message()
 
         headers = {
@@ -304,6 +325,7 @@ class Catalog(object):
     def get_stores(self, names=None, workspaces=None):
         '''
           Returns a list of stores in the catalog. If workspaces is specified will only return stores in those workspaces.
+          从 catalog 返回 stores列表，若指定了名称则只返回匹配的store
           If names is specified, will only return stores that match.
           names can either be a comma delimited string or an array.
           Will return an empty list if no stores are found.
@@ -322,6 +344,7 @@ class Catalog(object):
             ds_list = self.get_xml(ws.datastore_url)
             cs_list = self.get_xml(ws.coveragestore_url)
             wms_list = self.get_xml(ws.wmsstore_url)
+            # TODO:[*] 比较重要
             stores.extend([datastore_from_index(self, ws, n) for n in ds_list.findall("dataStore")])
             stores.extend([coveragestore_from_index(self, ws, n) for n in cs_list.findall("coverageStore")])
             stores.extend([wmsstore_from_index(self, ws, n) for n in wms_list.findall("wmsStore")])
@@ -549,7 +572,8 @@ class Catalog(object):
         TODO:[-] 目前看支持的type不包含nc
         Create a coveragestore for locally hosted rasters.
         If create_layer is set to true, will create a coverage/layer.
-        layer_name and source_name are only used if create_layer ia enabled. If not specified, the raster name will be used for both.
+        layer_name and source_name are only used if create_layer ia enabled.
+        If not specified, the raster name will be used for both.
         """
         if path is None:
             raise Exception('You must provide a full path to the raster')
@@ -572,7 +596,8 @@ class Catalog(object):
             'NITF',
             'RPFTOC',
             'RST',
-            'VRT'
+            'VRT',
+            'NetCDF'  # 新加入了nc格式的支持
         ]
 
         if type is None:
@@ -586,10 +611,12 @@ class Catalog(object):
 
         if upload_data is False:
             cs = UnsavedCoverageStore(self, name, workspace)
+            # TODO:[*] 20-03-13 此处赋值的type与url好像不存在该属性？
             cs.type = type
             cs.url = path if path.startswith("file:") else "file:{}".format(path)
             self.save(cs)
 
+            # 对传入的文件 名(包含后缀)进行拆分，取出文件名(不含后缀)
             if create_layer:
                 if layer_name is None:
                     layer_name = os.path.splitext(os.path.basename(path))[0]
@@ -1150,9 +1177,10 @@ class Catalog(object):
             names = []
         elif isinstance(names, basestring):
             names = [s.strip() for s in names.split(',') if s.strip()]
-
-        data = self.get_xml("{}/workspaces.xml".format(self.service_url))
+        # 
+        data: Element = self.get_xml("{}/workspaces.xml".format(self.service_url))
         workspaces = []
+        # 找到所有包含workspace的节点
         workspaces.extend([workspace_from_index(self, node) for node in data.findall("workspace")])
 
         if workspaces and names:

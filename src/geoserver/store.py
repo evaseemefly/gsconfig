@@ -10,7 +10,9 @@ __license__ = "MIT"
 
 import geoserver.workspace as ws
 from geoserver.resource import featuretype_from_index, coverage_from_index, wmslayer_from_index
-from geoserver.support import ResourceInfo, xml_property, key_value_pairs, write_bool, write_dict, write_string, build_url
+from geoserver.support import ResourceInfo, xml_property, key_value_pairs, write_bool, write_dict, write_string, \
+    build_url
+from geoserver.catalog import Catalog
 
 try:
     from past.builtins import basestring
@@ -24,6 +26,7 @@ def datastore_from_index(catalog, workspace, node):
 
 
 def coveragestore_from_index(catalog, workspace, node):
+    # TODO:[*] node是干嘛的？
     name = node.find("name")
     return CoverageStore(catalog, workspace, name.text)
 
@@ -36,7 +39,6 @@ def wmsstore_from_index(catalog, workspace, node):
 
 
 class DataStore(ResourceInfo):
-
     resource_type = "dataStore"
     save_method = "PUT"
 
@@ -68,10 +70,10 @@ class DataStore(ResourceInfo):
     connection_parameters = xml_property("connectionParameters", key_value_pairs)
 
     writers = dict(
-        enabled = write_bool("enabled"),
-        name = write_string("name"),
-        type = write_string("type"),
-        connectionParameters = write_dict("connectionParameters")
+        enabled=write_bool("enabled"),
+        name=write_string("name"),
+        type=write_string("type"),
+        connectionParameters=write_dict("connectionParameters")
     )
 
     @property
@@ -110,7 +112,6 @@ class DataStore(ResourceInfo):
 
 
 class UnsavedDataStore(DataStore):
-
     save_method = "POST"
 
     def __init__(self, catalog, name, workspace):
@@ -131,10 +132,15 @@ class UnsavedDataStore(DataStore):
 
 
 class CoverageStore(ResourceInfo):
+    # TODO:[-] 由于继承自ResourceInfo，由继承子类声明一个类变量，用来生成xml时的tag name时使用
     resource_type = 'coverageStore'
     save_method = "PUT"
 
-    def __init__(self, catalog, workspace, name):
+    def __init__(self, catalog: Catalog, workspace: str, name: str):
+        '''
+            父类中定义了一个字典属性  self.dirty
+        '''
+        # ResourceInfo 构造函数中只声明了 dom 与 dirty(dict)
         super(CoverageStore, self).__init__()
 
         self.catalog = catalog
@@ -160,11 +166,11 @@ class CoverageStore(ResourceInfo):
     type = xml_property("type")
 
     writers = dict(
-        enabled = write_bool("enabled"),
-        name = write_string("name"),
-        url = write_string("url"),
-        type = write_string("type"),
-        workspace = write_string("workspace")
+        enabled=write_bool("enabled"),
+        name=write_string("name"),
+        url=write_string("url"),
+        type=write_string("type"),
+        workspace=write_string("workspace")
     )
 
     def get_resources(self, name=None):
@@ -204,11 +210,11 @@ class UnsavedCoverageStore(CoverageStore):
     def __init__(self, catalog, name, workspace):
         super(UnsavedCoverageStore, self).__init__(catalog, workspace, name)
         self.dirty.update(
-            name = name,
-            enabled = True,
-            type = 'GeoTIFF',
-            url = "file:data/",
-            workspace = workspace
+            name=name,
+            enabled=True,
+            type='GeoTIFF',
+            url="file:data/",
+            workspace=workspace
         )
 
     @property
@@ -249,11 +255,11 @@ class WmsStore(ResourceInfo):
     type = xml_property("type")
     metadata = xml_property("metadata", key_value_pairs)
 
-    writers = dict(enabled = write_bool("enabled"),
-                   name = write_string("name"),
-                   capabilitiesURL = write_string("capabilitiesURL"),
-                   type = write_string("type"),
-                   metadata = write_dict("metadata"))
+    writers = dict(enabled=write_bool("enabled"),
+                   name=write_string("name"),
+                   capabilitiesURL=write_string("capabilitiesURL"),
+                   type=write_string("type"),
+                   metadata=write_dict("metadata"))
 
     def get_resources(self, name=None, available=False):
         res_url = "{}/workspaces/{}/wmsstores/{}/wmslayers.xml".format(

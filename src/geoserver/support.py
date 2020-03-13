@@ -42,12 +42,15 @@ REPROJECT = "REPROJECT"
 # The projection handling policy for layers that should use the projection
 # information from the underlying storage mechanism to reproject to the
 # configured projection.
+from typing import List
 
-
-def build_url(base, seg, query=None):
+def build_url(base:str, seg:List[str], query=None):
     """
     Create a URL from a list of path segments and an optional dict of query
     parameters.
+    完成url的拼接工作，query干什么用的暂时没用到
+            base:'http://localhost:8082/geoserver/rest'
+            seg:['workspaces', 'my_test_2', 'datastores.xml']
     """
 
     def clean_segment(segment):
@@ -59,24 +62,36 @@ def build_url(base, seg, query=None):
             segment = segment.encode('utf-8')
         return segment
 
+    # TODO:[*] ?
     seg = (quote(clean_segment(s)) for s in seg)
     if query is None or len(query) == 0:
         query_string = ''
     else:
         query_string = "?" + urlencode(query)
+    # 'workspaces/my_test_2/datastores.xml'
     path = '/'.join(seg) + query_string
+    # TODO:[-]  对于base去掉右侧的 '/' 并加上 '/'
     adjusted_base = base.rstrip('/') + '/'
     return urljoin(str(adjusted_base), str(path))
 
 
 def xml_property(path, converter = lambda x: x.text, default=None):
+    '''
+        TODO:[-] 在 store 中 会通过该方法进行读取xml中的节点的操作
+                注意对xml的读取操作，可以参考此方法
+                会在 store.py -> CoverageStore 中调用
+    '''
     def getter(self):
+        # ResourceInfo 中定义的一个字典被子类update
+        # 判断指定的 path 是否在 ResourceInfo->dict中，若存在则取出
+        # 为 support.py -> ResourceInfo 中定义的字典
         if path in self.dirty:
             return self.dirty[path]
         else:
             if self.dom is None:
                 self.fetch()
             node = self.dom.find(path)
+            # TODO:[*] converter 为一个lambda
             return converter(self.dom.find(path)) if node is not None else default
 
     def setter(self, value):
@@ -85,6 +100,7 @@ def xml_property(path, converter = lambda x: x.text, default=None):
     def delete(self):
         self.dirty[path] = None
 
+    # TODO:[*] ?
     return property(getter, setter, delete)
 
 
@@ -121,7 +137,7 @@ def key_value_pairs(node):
 
 
 def write_string(name):
-    def write(builder, value):
+    def write(builder:TreeBuilder, value:str):
         builder.start(name, dict())
         if (value is not None):
             builder.data(value)
@@ -218,7 +234,7 @@ class ResourceInfo(object):
         self.clear()
         self.fetch()
 
-    def serialize(self, builder):
+    def serialize(self, builder:TreeBuilder):
         # GeoServer will disable the resource if we omit the <enabled> tag,
         # so force it into the dirty dict before writing
         if hasattr(self, "enabled"):
@@ -227,15 +243,25 @@ class ResourceInfo(object):
         if hasattr(self, "advertised"):
             self.dirty['advertised'] = self.advertised
 
+        # TODO:[*] 此处的wirters 是什么？
         for k, writer in self.writers.items():
             if k in self.dirty:
                 writer(builder, self.dirty[k])
 
     def message(self):
+        '''
+            # TODO:[-] 20-03-13 在ResourceInfo中定义的方法，
+            最终返回的是需要提交的msg
+
+            * 由于ResourceInfo是需要由子类继承的，所以self就是继承的子类
+            eg: UnsavedCoverageStore
+        '''
         builder = TreeBuilder()
+        # 创建了一个 resource_type(每个子类会声明这个类变量) 的 treebuilder
         builder.start(self.resource_type, dict())
         self.serialize(builder)
         builder.end(self.resource_type)
+        #b'<coverageStore><enabled>true</enabled><name>nmefc_2016072112_opdr_02</name><url>file:nmefc/waterwind/nmefc_2016072112_opdr.nc</url><type>NetCDF</type><workspace>my_test_2</workspace></coverageStore>'
         msg = tostring(builder.close())
         return msg
 

@@ -9,18 +9,26 @@ __copyright__ = "Copyright 2012-2018 Boundless, Copyright 2010-2012 OpenPlans"
 __license__ = "MIT"
 
 from geoserver.support import ResourceInfo, build_url
+from geoserver.catalog import Catalog
+from xml.etree.ElementTree import Element
 
 
-def workspace_from_index(catalog, node):
-    name = node.find("name")
+def workspace_from_index(catalog: Catalog, node):
+    '''
+        node:<class 'xml.etree.ElementTree.Element'>
+    '''
+    name: Element = node.find("name")
     return Workspace(catalog, name.text)
 
 
 class Workspace(ResourceInfo):
-
     resource_type = "workspace"
 
-    def __init__(self, catalog, name):
+    def __init__(self, catalog: Catalog, name: str):
+        '''
+            name:workspace的名字
+            catalog:Catalog
+        '''
         super(Workspace, self).__init__()
         self.catalog = catalog
         self.name = name
@@ -35,6 +43,10 @@ class Workspace(ResourceInfo):
 
     @property
     def datastore_url(self):
+        '''
+            获取 data store 最终url
+            最终 return 'http://localhost:8082/geoserver/rest/workspaces/my_test_2/datastores.xml'
+        '''
         return build_url(self.catalog.service_url, ["workspaces", self.name, "datastores.xml"])
 
     @property
