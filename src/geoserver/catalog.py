@@ -233,7 +233,7 @@ class Catalog(object):
 
     def get_xml(self, rest_url):
         '''
-            大体的思路就是讲 rest_url中的 response.content 转换为xml对象 Element
+            大体的思路就是将 rest_url中的 response.content 转换为xml对象 Element
         '''
         # TODO:[*]
         cached_response = self._cache.get(rest_url)
@@ -340,11 +340,14 @@ class Catalog(object):
             workspaces = self.get_workspaces(names=workspaces)
 
         stores = []
+
+        # TODO: 20-03-13 从workspaces 中遍历,获取data store coverage store 与 wms store 的所有的list
         for ws in workspaces:
             ds_list = self.get_xml(ws.datastore_url)
             cs_list = self.get_xml(ws.coveragestore_url)
             wms_list = self.get_xml(ws.wmsstore_url)
             # TODO:[*] 比较重要
+            # 从 ds_list 中找到所有的 dataStore 的节点
             stores.extend([datastore_from_index(self, ws, n) for n in ds_list.findall("dataStore")])
             stores.extend([coveragestore_from_index(self, ws, n) for n in cs_list.findall("coverageStore")])
             stores.extend([wmsstore_from_index(self, ws, n) for n in wms_list.findall("wmsStore")])

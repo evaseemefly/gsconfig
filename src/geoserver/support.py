@@ -44,13 +44,21 @@ REPROJECT = "REPROJECT"
 # configured projection.
 from typing import List
 
-def build_url(base:str, seg:List[str], query=None):
+
+def build_url(base: str, seg: List[str], query: {} = None):
     """
     Create a URL from a list of path segments and an optional dict of query
     parameters.
     完成url的拼接工作，query干什么用的暂时没用到
+    TODO:[-] 20-03-13
+    大体的思路是：
+        base 是基础url + seq 是需要拼接的一个list，拼接在base url 后面，然后query 是等于是查询的条件，直接 ?key=val的形式进行拼接
             base:'http://localhost:8082/geoserver/rest'
             seg:['workspaces', 'my_test_2', 'datastores.xml']
+            query:{'name': 'nmefc_2016072112_opdr_02'}
+            注意query是一个字典
+    return:
+        'http://localhost:8080/geoserver/rest/workspaces/ceshi/coveragestores?name=nmefc_2016072112_opdr_02'
     """
 
     def clean_segment(segment):
@@ -69,18 +77,23 @@ def build_url(base:str, seg:List[str], query=None):
     else:
         query_string = "?" + urlencode(query)
     # 'workspaces/my_test_2/datastores.xml'
+    # query_string:'?name=nmefc_2016072112_opdr_02'
+    # path:'workspaces/ceshi/coveragestores?name=nmefc_2016072112_opdr_02'
     path = '/'.join(seg) + query_string
     # TODO:[-]  对于base去掉右侧的 '/' 并加上 '/'
     adjusted_base = base.rstrip('/') + '/'
+
+    # 'http://localhost:8080/geoserver/rest/workspaces/ceshi/coveragestores?name=nmefc_2016072112_opdr_02'
     return urljoin(str(adjusted_base), str(path))
 
 
-def xml_property(path, converter = lambda x: x.text, default=None):
+def xml_property(path, converter=lambda x: x.text, default=None):
     '''
         TODO:[-] 在 store 中 会通过该方法进行读取xml中的节点的操作
                 注意对xml的读取操作，可以参考此方法
                 会在 store.py -> CoverageStore 中调用
     '''
+
     def getter(self):
         # ResourceInfo 中定义的一个字典被子类update
         # 判断指定的 path 是否在 ResourceInfo->dict中，若存在则取出
@@ -137,11 +150,12 @@ def key_value_pairs(node):
 
 
 def write_string(name):
-    def write(builder:TreeBuilder, value:str):
+    def write(builder: TreeBuilder, value: str):
         builder.start(name, dict())
         if (value is not None):
             builder.data(value)
         builder.end(name)
+
     return write
 
 
@@ -149,10 +163,12 @@ def write_bool(name):
     '''
         TODO:[*] 20-03-11 没太看懂，在所有的store中都定影了writers中调用
     '''
+
     def write(builder, b):
         builder.start(name, dict())
         builder.data("true" if b and b != "false" else "false")
         builder.end(name)
+
     return write
 
 
@@ -161,6 +177,7 @@ def write_bbox(name):
         builder.start(name, dict())
         bbox_xml(builder, b)
         builder.end(name)
+
     return write
 
 
@@ -174,6 +191,7 @@ def write_string_list(name):
                 builder.data(w)
                 builder.end("string")
         builder.end(name)
+
     return write
 
 
@@ -188,6 +206,7 @@ def write_dict(name):
             builder.data(v)
             builder.end("entry")
         builder.end(name)
+
     return write
 
 
@@ -206,6 +225,7 @@ def write_metadata(name):
                 builder.data(v)
             builder.end("entry")
         builder.end(name)
+
     return write
 
 
@@ -234,7 +254,7 @@ class ResourceInfo(object):
         self.clear()
         self.fetch()
 
-    def serialize(self, builder:TreeBuilder):
+    def serialize(self, builder: TreeBuilder):
         # GeoServer will disable the resource if we omit the <enabled> tag,
         # so force it into the dirty dict before writing
         if hasattr(self, "enabled"):
@@ -261,7 +281,7 @@ class ResourceInfo(object):
         builder.start(self.resource_type, dict())
         self.serialize(builder)
         builder.end(self.resource_type)
-        #b'<coverageStore><enabled>true</enabled><name>nmefc_2016072112_opdr_02</name><url>file:nmefc/waterwind/nmefc_2016072112_opdr.nc</url><type>NetCDF</type><workspace>my_test_2</workspace></coverageStore>'
+        # b'<coverageStore><enabled>true</enabled><name>nmefc_2016072112_opdr_02</name><url>file:nmefc/waterwind/nmefc_2016072112_opdr.nc</url><type>NetCDF</type><workspace>my_test_2</workspace></coverageStore>'
         msg = tostring(builder.close())
         return msg
 
@@ -379,7 +399,6 @@ def dimension_info(builder, metadata):
 
 
 class DimensionInfo(object):
-
     _lookup = (
         ('seconds', 1),
         ('minutes', 60),
@@ -414,7 +433,7 @@ class DimensionInfo(object):
     def resolution_millis(self):
         '''if set, get the value of resolution in milliseconds'''
         if self.resolution is None or not isinstance(self.resolution, basestring):
-                return self.resolution
+            return self.resolution
         val, mult = self.resolution.split(' ')
         return int(float(val) * self._multipier(mult) * 1000)
 
@@ -436,6 +455,7 @@ class DimensionInfo(object):
 
 def md_dimension_info(name, node):
     """Extract metadata Dimension Info from an xml node"""
+
     def _get_value(child_name):
         return getattr(node.find(child_name), 'text', None)
 

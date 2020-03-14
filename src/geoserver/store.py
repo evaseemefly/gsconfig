@@ -19,6 +19,16 @@ try:
 except ImportError:
     pass
 
+# TODO:[-] 我自己加入的代码部分
+from abc import ABCMeta, abstractmethod
+
+
+class IStore(metaclass=ABCMeta):
+    @property
+    @abstractmethod
+    def href(self):
+        pass
+
 
 def datastore_from_index(catalog, workspace, node):
     name = node.find("name")
@@ -38,7 +48,7 @@ def wmsstore_from_index(catalog, workspace, node):
     return WmsStore(catalog, workspace, name.text, None, None)
 
 
-class DataStore(ResourceInfo):
+class DataStore(ResourceInfo, IStore):
     resource_type = "dataStore"
     save_method = "PUT"
 
@@ -111,7 +121,7 @@ class DataStore(ResourceInfo):
             return [ft_from_node(node) for node in xml.findall("featureType")]
 
 
-class UnsavedDataStore(DataStore):
+class UnsavedDataStore(DataStore, IStore):
     save_method = "POST"
 
     def __init__(self, catalog, name, workspace):
@@ -131,7 +141,7 @@ class UnsavedDataStore(DataStore):
         return build_url(self.catalog.service_url, path, query)
 
 
-class CoverageStore(ResourceInfo):
+class CoverageStore(ResourceInfo, IStore):
     # TODO:[-] 由于继承自ResourceInfo，由继承子类声明一个类变量，用来生成xml时的tag name时使用
     resource_type = 'coverageStore'
     save_method = "PUT"
@@ -149,6 +159,9 @@ class CoverageStore(ResourceInfo):
 
     @property
     def href(self):
+        '''
+            TODO:[-] 所有的ResourceInfo 实现类均需实现 href 属性方法(此处建议还是加入接口)
+        '''
         url = build_url(
             self.catalog.service_url,
             [
