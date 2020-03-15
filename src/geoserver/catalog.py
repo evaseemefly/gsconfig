@@ -289,7 +289,9 @@ class Catalog(object):
                 只有在 Catalog -> create_coveragestore -> self.save中调用
                 在 create_coveragestore 使用中，调用了save方法，传入的obj是要被存储(也就是提交到geoserver rest)的对象
                 此时的obj是 UnsavedCoverageStore
-                将具体实现的store 获取message (由父类 ResourceInfo 实现message 方法)
+                将具体实现的 store 获取 message (由父类 ResourceInfo 实现 message 方法)
+                obj:UnsaveCoverageStore 等
+        TODO:[-] 20-03-14 save 主要是用来创建 store 的，目前看nc可以直接使用，不需要重写此方法
         saves an object to the REST service
         gets the object's REST location and the data from the object,
         then POSTS the request.
@@ -326,6 +328,7 @@ class Catalog(object):
         '''
           Returns a list of stores in the catalog. If workspaces is specified will only return stores in those workspaces.
           从 catalog 返回 stores列表，若指定了名称则只返回匹配的store
+          返回类型为 geoserver.store 中的store实现
           If names is specified, will only return stores that match.
           names can either be a comma delimited string or an array.
           Will return an empty list if no stores are found.
@@ -572,7 +575,12 @@ class Catalog(object):
                              create_layer=True, layer_name=None, source_name=None, upload_data=False,
                              contet_type="image/tiff"):
         """
-        TODO:[-] 目前看支持的type不包含nc
+        TODO:[-] 目前看支持的type不包含nc,已改造
+                layer_name 为创建的图层的名称
+                source_name 为栅格中的band的名称
+                对于提交的 coverage layer 发现他的处理很简单，只是拼接 url与 data ，并未嵌套其他的dict
+                20-03-14 鉴于此方法无法满足提交定制化的 多band的data(nc)，准备新实现一个create方法
+        TODO:[*] 此处存在一个问题就是对于多band的情况，可能会有问题
         Create a coveragestore for locally hosted rasters.
         If create_layer is set to true, will create a coverage/layer.
         layer_name and source_name are only used if create_layer ia enabled.
@@ -612,11 +620,16 @@ class Catalog(object):
             workspace = self.get_default_workspace()
         workspace = _name(workspace)
 
+        # TODO:[-] 此处他大概判断一下是否需要上传文件，若需要上传文件，则读取本地文件，并上传。但并不支持复杂的data的拼接
+        # 我的方式还是将nc原始文件直接复制到服务端的指定路径下，不需要上传功能
         if upload_data is False:
+            # TODO:[-] unSaved是需要创建的store(可以放在创建layer中时调用，也可以独立出来)
+            # TODO:[*] 此处存在一个问题，若是指定ws中已经存在了指定store，后台会报错，此处需要加入一个判断
             cs = UnsavedCoverageStore(self, name, workspace)
             # TODO:[*] 20-03-13 此处赋值的type与url好像不存在该属性？
             cs.type = type
             cs.url = path if path.startswith("file:") else "file:{}".format(path)
+            # TODO:[-] 所有的的 create layer 都会先提交 store，也就是在 catalog.save 提交 store，再执行后续的操作
             self.save(cs)
 
             # 对传入的文件 名(包含后缀)进行拆分，取出文件名(不含后缀)
@@ -625,7 +638,7 @@ class Catalog(object):
                     layer_name = os.path.splitext(os.path.basename(path))[0]
                 if source_name is None:
                     source_name = os.path.splitext(os.path.basename(path))[0]
-
+                # 此处再看一下之前研究的xml
                 data = "<coverage><name>{}</name><nativeName>{}</nativeName></coverage>".format(layer_name, source_name)
                 url = "{}/workspaces/{}/coveragestores/{}/coverages.xml".format(self.service_url, workspace, name)
                 headers = {"Content-type": "application/xml"}
@@ -637,11 +650,13 @@ class Catalog(object):
                                                                                                 resp.text))
                 self._cache.clear()
                 return self.get_resources(names=layer_name, workspaces=workspace)[0]
+        # 以下提交的data是通过读取后再put提交，不使用此种方式
         else:
             data = open(path, 'rb')
             params = {"configure": "first", "coverageName": name}
             url = build_url(
                 self.service_url,
+                # 以下的list是seq，为一个集合，在build_url 方法里面 进行拼接
                 [
                     "workspaces",
                     workspace,
@@ -664,6 +679,51 @@ class Catalog(object):
                                                                              resp.text))
 
         return self.get_stores(names=name, workspaces=workspace)[0]
+
+    def create_coverageNCstore(self, name: str, workspace=None, path=None, store_type='netcdf', create_layer=True,
+                               layer_name=None, source_name=None, bands_names=[]):
+        '''
+            TODO:[*] 20-03-14 自己实现的 nc coverage 方法
+            准备自己实现的创建 nc 格式的coverage layer
+        '''
+        if path is None:
+            raise Exception('需要填入栅格数据全路径')
+        # 对于有 : 间隔的 layer_name 需要根据 ：拆分
+        if layer_name is not None and ":" in layer_name:
+            ws_name, layer_name = layer_name.split(':')
+
+        # 由于目前本方法只处理 nc 格式的数据
+        allowed_types: List[str] = [
+            'netcdf'
+        ]
+        if store_type is None:
+            raise Exception('未提供type')
+        if store_type.lower() not in allowed_types:
+            raise Exception(f'{store_type}未支持')
+
+        if workspace is None:
+            workspace = self.get_default_workspace()
+        workspace_name = _name(workspace)
+
+        # 下面为主要的改写的内容
+        '''
+            大体思路：
+                1- 创建 unsavedCoverageStore
+                2- 调用 save方法
+                3- 发送post请求
+        '''
+        cs = UnsavedCoverageStore(self, name, workspace_name)
+        cs.type = store_type
+        cs.url = path if path.startswith("file:") else "file:{}".format(path)
+        self.save(cs)
+        # TODO:[!] 此部分比较重要: 需要创建 layer
+        if create_layer:
+            if layer_name is None:
+                layer_name = os.path.splitext(os.path.basename(path))[0]
+            if source_name is None:
+                source_name = os.path.splitext(os.path.basename(path))[0]
+        # TODO:[*] 此处为难点，需要生成一个提交的data
+        pass
 
     def add_granule(self, data, store, workspace=None):
         '''Harvest/add a granule into an existing imagemosaic'''

@@ -8,6 +8,8 @@ __author__ = "David Winslow"
 __copyright__ = "Copyright 2012-2018 Boundless, Copyright 2010-2012 OpenPlans"
 __license__ = "MIT"
 
+from xml.etree.ElementTree import XML, Element, ElementTree
+from typing import Dict
 from geoserver.support import ResourceInfo, xml_property, write_bool, workspace_from_url
 from geoserver.style import Style
 from geoserver.catalog import Catalog
@@ -121,7 +123,7 @@ class Layer(ResourceInfo):
     @property
     def resource(self):
         '''
-            TODO:[*] 何用？
+            TODO:[*] 何用？ 我的理解layer里面没有msg，有reources
         '''
         if self.dom is None:
             self.fetch()
@@ -214,3 +216,169 @@ class Layer(ResourceInfo):
         default_style=_write_default_style,
         alternate_styles=_write_alternate_styles
     )
+
+
+class CoverageLayer(Layer):
+    '''
+        TODO:[!] + 20-03-14 新建的用来创建 coverage layer
+    '''
+
+    def __init__(self, catalog: Catalog, name: str):
+        super().__init__(catalog, name)
+        root_node = (
+            {'key': 'name', 'val': self.name}
+        )
+        pass
+
+    @property
+    def _base_msg_str(self):
+        '''
+            基础 base xml
+            先创建一个基础的 xml 然后向其中插入动态的节点数据，先去掉所有的动态数据的节点
+
+        '''
+        base_xml_str = f'''
+                    <coverage>
+  <namespace>
+</namespace>  
+  <description>Generated from NetCDF</description>
+  <keywords>    
+    <string>WCS</string>
+    <string>NetCDF</string>
+  </keywords>
+  <nativeCRS>GEOGCS["WGS 84", DATUM["World Geodetic System 1984", SPHEROID["WGS 84", 6378137.0, 298.257223563, AUTHORITY["EPSG","7030"]], AUTHORITY["EPSG","6326"]], PRIMEM["Greenwich", 0.0, AUTHORITY["EPSG","8901"]], UNIT["degree", 0.017453292519943295], AXIS["Geodetic longitude", EAST], AXIS["Geodetic latitude", NORTH], AUTHORITY["EPSG","4326"]]</nativeCRS>
+  <srs>EPSG:4326</srs>
+  <nativeBoundingBox>
+    <minx>99.9</minx>
+    <maxx>150.10000000000002</maxx>
+    <miny>-0.1</miny>
+    <maxy>50.1</maxy>
+    <crs>EPSG:4326</crs>
+  </nativeBoundingBox>
+  <latLonBoundingBox>
+    <minx>99.9</minx>
+    <maxx>150.10000000000002</maxx>
+    <miny>-0.1</miny>
+    <maxy>50.1</maxy>
+    <crs>EPSG:4326</crs>
+  </latLonBoundingBox>
+  <projectionPolicy>REPROJECT_TO_DECLARED</projectionPolicy>
+  <enabled>true</enabled>
+  <metadata>
+    <entry key="COVERAGE_VIEW">
+      <coverageView>
+        <coverageBands>
+        </coverageBands>        
+        <envelopeCompositionType>INTERSECTION</envelopeCompositionType>
+        <selectedResolution>BEST</selectedResolution>
+        <selectedResolutionIndex>-1</selectedResolutionIndex>
+      </coverageView>
+    </entry>
+    <entry key="cachingEnabled">false</entry>
+    <entry key="dirName">nmefc_wind_dir_xy_view_nmefc_wind</entry>
+  </metadata>
+  <store class="coverageStore">
+   </store>
+  <nativeFormat>NetCDF</nativeFormat>
+  <grid dimension="2">
+    <range>
+      <low>0 0</low>
+      <high>251 251</high>
+    </range>
+    <transform>
+      <scaleX>0.2</scaleX>
+      <scaleY>-0.2</scaleY>
+      <shearX>0.0</shearX>
+      <shearY>0.0</shearY>
+      <translateX>100.0</translateX>
+      <translateY>50.0</translateY>
+    </transform>
+    <crs>EPSG:4326</crs>
+  </grid>
+  <supportedFormats>
+    <string>GEOTIFF</string>
+    <string>GIF</string>
+    <string>PNG</string>
+    <string>JPEG</string>
+    <string>TIFF</string>
+  </supportedFormats>
+  <interpolationMethods>
+    <string>nearest neighbor</string>
+    <string>bilinear</string>
+    <string>bicubic</string>
+  </interpolationMethods>
+  <defaultInterpolationMethod>nearest neighbor</defaultInterpolationMethod>
+  <dimensions>
+    <coverageDimension>
+      <name>x_wind_10m</name>
+      <description>GridSampleDimension[-Infinity,Infinity]</description>
+      <range>
+        <min>-inf</min>
+        <max>inf</max>
+      </range>
+      <dimensionType>
+        <name>REAL_32BITS</name>
+      </dimensionType>
+    </coverageDimension>
+    <coverageDimension>
+      <name>y_wind_10m</name>
+      <description>GridSampleDimension[-Infinity,Infinity]</description>
+      <range>
+        <min>-inf</min>
+        <max>inf</max>
+      </range>
+      <dimensionType>
+        <name>REAL_32BITS</name>
+      </dimensionType>
+    </coverageDimension>
+  </dimensions>
+  <requestSRS>
+    <string>EPSG:4326</string>
+  </requestSRS>
+  <responseSRS>
+    <string>EPSG:4326</string>
+  </responseSRS>
+  <parameters>
+    <entry>
+      <string>Bands</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>Filter</string>
+      <null/>
+    </entry>
+  </parameters>
+</coverage>
+                    '''
+        return base_xml_str
+
+    @property
+    def base_msg(self) -> ElementTree:
+        '''
+            返回当前的 base_msg xml对象
+        '''
+        base_msg_xml = XML(self._base_msg_str)
+        return base_msg_xml
+
+    def insert_node(self, node: Dict[str, str], singleton=True):
+        '''
+            node:传入的{key,val} 节点
+            singleton:是否是单例节点
+        '''
+        # 先找到根节点
+        # TODO:[*]AttributeError: 'xml.etree.ElementTree.Element' object has no attribute 'getroot'
+        root_node = self.base_msg.getroot()
+        # 需要判断是否已经包含指定的node
+        if singleton:
+            if len(root_node.findall(node.key)) > 0:
+                raise OSError
+        # 创建需要直接插入的节点
+        child = Element(node.key)
+        child.text = node.val
+        # 添加
+        root_node.append(child)
+        pass
+
+    @property
+    def message(self):
+        return

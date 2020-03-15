@@ -13,6 +13,8 @@ from xml.etree.ElementTree import TreeBuilder, tostring
 from tempfile import mkstemp
 from zipfile import ZipFile
 import os
+import abc
+from abc import abstractclassmethod,abstractmethod
 
 try:
     from urllib.parse import urljoin, quote, urlencode, urlparse
@@ -229,7 +231,7 @@ def write_metadata(name):
     return write
 
 
-class ResourceInfo(object):
+class ResourceInfo(metaclass=abc.ABCMeta):
     '''
         TODO:[-] 20-03-09 需要由所有继承的子类实现一些方法，eg: href 等
     '''
@@ -240,8 +242,17 @@ class ResourceInfo(object):
         # TODO:[*] 20-03-11 这个字典何用，被子类update
         self.dirty = dict()
 
+
+    @property
+    @abc.abstractmethod
+    def href(self):
+        '''
+            TODO:[-] + 20-03-14 子类中必须要实现的 href 方法
+        '''
+        pass
+
     def fetch(self):
-        # TODO:[-] 20-03-09 此处的self.href是什么？ self.catalog在哪里声明？
+        # TODO:[-] 20-03-09 此处的self.href是什么？ self.catalog在哪里声明？ self.href 是需要由子类实现的属性方法
         # 注意看一下 layer line 105 继承自 ResourceInfo ，里面实现了 href 方法(property)
         # 调用时直接调用父类中的fetch 方法 获取对应的xml
         # self.catalog 在继承类中实现 eg: layer line 108
@@ -479,6 +490,9 @@ def md_dimension_info(name, node):
 
 
 def dynamic_default_values_info(builder, metadata):
+    '''
+        TODO:[*] 20-03-15 ?
+    '''
     if isinstance(metadata, DynamicDefaultValues):
         builder.start("DynamicDefaultValues", dict())
 
