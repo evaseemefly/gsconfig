@@ -13,14 +13,6 @@ from geoserver.catalog import Catalog
 from xml.etree.ElementTree import Element
 
 
-def workspace_from_index(catalog: Catalog, node):
-    '''
-        node:<class 'xml.etree.ElementTree.Element'>
-    '''
-    name: Element = node.find("name")
-    return Workspace(catalog, name.text)
-
-
 class Workspace(ResourceInfo):
     resource_type = "workspace"
 
@@ -55,3 +47,11 @@ class Workspace(ResourceInfo):
 
     def __repr__(self):
         return "%s @ %s" % (self.name, self.href)
+
+
+def workspace_from_index(catalog: Catalog, node) -> Workspace:
+    '''
+        node:<class 'xml.etree.ElementTree.Element'>
+    '''
+    name: Element = node.find("name")
+    return Workspace(catalog, name.text)

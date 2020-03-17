@@ -178,6 +178,7 @@ class CoverageStore(ResourceInfo, IStore):
     url = xml_property("url")
     type = xml_property("type")
 
+    # TODO:[-] 主要为继承的 ResourceInfo 父类中的 def message -> def serialize 中调用
     writers = dict(
         enabled=write_bool("enabled"),
         name=write_string("name"),
@@ -187,6 +188,9 @@ class CoverageStore(ResourceInfo, IStore):
     )
 
     def get_resources(self, name=None):
+        '''
+            TODO:[*] ? 何用？
+        '''
         res_url = build_url(
             self.catalog.service_url,
             [
@@ -232,6 +236,7 @@ class UnsavedCoverageStore(CoverageStore):
 
     @property
     def href(self):
+        # 'http://localhost:8082/geoserver/rest/workspaces/my_test_2/coveragestores?name=nmefc_2016072112_opdr_02'
         url = build_url(
             self.catalog.service_url,
             [
@@ -240,6 +245,42 @@ class UnsavedCoverageStore(CoverageStore):
                 "coveragestores"
             ],
             dict(name=self.name)
+        )
+        return url
+
+
+class UnsavedCoverageNcStore(CoverageStore):
+    '''
+        TODO:[*] + 20-03-17 创建了 nc store 的 CoverageStore 子类
+    '''
+
+    def __init__(self, catalog, name, workspace):
+        super().__init__(catalog, workspace, name)
+        self.dirty.update(
+            name=name,
+            enabled=True,
+            type='NetCDF',
+            url="file:data/",
+            workspace=workspace
+        )
+
+    @property
+    def href(self):
+        '''
+            重写的 unsaved 的 nc store 的提交 url
+        '''
+        # 'http://localhost:8082/geoserver/rest/workspaces/my_test_2/coveragestores?name=nmefc_2016072112_opdr_02'
+        # f'http://localhost:8082/geoserver/rest/workspaces/{WORK_SPACE}/coveragestores/{coveragestore}/coverages'
+        url = build_url(
+            self.catalog.service_url,
+            [
+                "workspaces",
+                self.workspace,
+                "coveragestores",
+                self.name,
+                "coverages"
+            ]
+            # dict(name=self.name)
         )
         return url
 

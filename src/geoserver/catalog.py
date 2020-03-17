@@ -13,14 +13,32 @@ from datetime import datetime, timedelta
 import logging
 from geoserver.layer import Layer
 from geoserver.resource import FeatureType
-from geoserver.store import (
-    coveragestore_from_index,
-    datastore_from_index,
-    wmsstore_from_index,
-    UnsavedDataStore,
-    UnsavedCoverageStore,
-    UnsavedWmsStore
-)
+import sys
+from conf.settings import ENV, DEV_ROOT_PATH
+
+# TODO:[X] 注意加入了 开发模式
+if ENV == 'DEV':
+    BUILD_SRC = DEV_ROOT_PATH
+    sys.path.append(BUILD_SRC)
+    from src.geoserver.store import (
+        coveragestore_from_index,
+        datastore_from_index,
+        wmsstore_from_index,
+        UnsavedDataStore,
+        UnsavedCoverageStore,
+        UnsavedCoverageNcStore,
+        UnsavedWmsStore
+    )
+else:
+    from geoserver.store import (
+        coveragestore_from_index,
+        datastore_from_index,
+        wmsstore_from_index,
+        UnsavedDataStore,
+        UnsavedCoverageStore,
+        UnsavedWmsStore
+    )
+
 from geoserver.style import Style
 from geoserver.support import prepare_upload_bundle, build_url
 from geoserver.layergroup import LayerGroup, UnsavedLayerGroup
@@ -231,7 +249,7 @@ class Catalog(object):
         # do we really need to return anything other than None?
         return (resp)
 
-    def get_xml(self, rest_url):
+    def get_xml(self, rest_url: str) -> Element:
         '''
             大体的思路就是将 rest_url中的 response.content 转换为xml对象 Element
         '''
@@ -241,7 +259,7 @@ class Catalog(object):
         def is_valid(cached_response):
             return cached_response is not None and datetime.now() - cached_response[0] < timedelta(seconds=5)
 
-        def parse_or_raise(xml: str):
+        def parse_or_raise(xml: str) -> XML:
             '''
                 将传入的xml_str 转成xml 对象
 
@@ -346,9 +364,9 @@ class Catalog(object):
 
         # TODO: 20-03-13 从workspaces 中遍历,获取data store coverage store 与 wms store 的所有的list
         for ws in workspaces:
-            ds_list = self.get_xml(ws.datastore_url)
-            cs_list = self.get_xml(ws.coveragestore_url)
-            wms_list = self.get_xml(ws.wmsstore_url)
+            ds_list: Element = self.get_xml(ws.datastore_url)
+            cs_list: Element = self.get_xml(ws.coveragestore_url)
+            wms_list: Element = self.get_xml(ws.wmsstore_url)
             # TODO:[*] 比较重要
             # 从 ds_list 中找到所有的 dataStore 的节点
             stores.extend([datastore_from_index(self, ws, n) for n in ds_list.findall("dataStore")])
@@ -683,7 +701,7 @@ class Catalog(object):
     def create_coverageNCstore(self, name: str, workspace=None, path=None, store_type='netcdf', create_layer=True,
                                layer_name=None, source_name=None, bands_names=[]):
         '''
-            TODO:[*] 20-03-14 自己实现的 nc coverage 方法
+            TODO:[*] 20-03-14 ~ 03-17 自己实现的 nc coverage 方法
             准备自己实现的创建 nc 格式的coverage layer
         '''
         if path is None:
@@ -722,7 +740,8 @@ class Catalog(object):
                 layer_name = os.path.splitext(os.path.basename(path))[0]
             if source_name is None:
                 source_name = os.path.splitext(os.path.basename(path))[0]
-        # TODO:[*] 此处为难点，需要生成一个提交的data
+        # TODO:[-] 此处为难点，需要生成一个提交的data
+        # TODO:[*] 20-03-17 将之前错误放置在 layer 中的生成 xml的方法放在此处
         pass
 
     def add_granule(self, data, store, workspace=None):
@@ -1229,8 +1248,9 @@ class Catalog(object):
         # Can only have one workspace with this name
         return workspaces[0] if workspaces else None
 
-    def get_workspaces(self, names=None):
+    def get_workspaces(self, names: List[str] = None):
         '''
+            返回 在 names 中的 workspaces
           Returns a list of workspaces in the catalog.
           If names is specified, will only return workspaces that match.
           names can either be a comma delimited string or an array.
@@ -1242,7 +1262,7 @@ class Catalog(object):
             names = [s.strip() for s in names.split(',') if s.strip()]
         # 
         data: Element = self.get_xml("{}/workspaces.xml".format(self.service_url))
-        workspaces = []
+        workspaces: List[Workspace] = []
         # 找到所有包含workspace的节点
         workspaces.extend([workspace_from_index(self, node) for node in data.findall("workspace")])
 

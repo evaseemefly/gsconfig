@@ -8,11 +8,20 @@ __author__ = "David Winslow"
 __copyright__ = "Copyright 2012-2018 Boundless, Copyright 2010-2012 OpenPlans"
 __license__ = "MIT"
 
-from xml.etree.ElementTree import XML, Element, ElementTree
+from xml.etree.ElementTree import XML, Element, ElementTree, fromstring
 from typing import Dict
-from geoserver.support import ResourceInfo, xml_property, write_bool, workspace_from_url
+import sys
 from geoserver.style import Style
 from geoserver.catalog import Catalog
+from geoserver.support import ResourceInfo, xml_property, key_value_pairs, write_bool, write_dict, write_string, \
+    build_url
+
+from conf.settings import ENV, DEV_ROOT_PATH
+
+if ENV == 'DEV':
+    BUILD_SRC = DEV_ROOT_PATH
+    sys.path.append(BUILD_SRC)
+    from src.geoserver.support import ResourceInfo, xml_property, write_bool, workspace_from_url, write_metadata_nc
 
 
 class _attribution(object):
@@ -220,15 +229,40 @@ class Layer(ResourceInfo):
 
 class CoverageLayer(Layer):
     '''
-        TODO:[!] + 20-03-14 新建的用来创建 coverage layer
+        TODO:[!] + 20-03-14 ~ 03-17 新建的用来创建 coverage layer
+                   ! 注意此处存在的一个问题，layer不能被创建，注意，之前在 catalog 中也没有 create_layer的方法
+                   ! 创建layer是放在 catalog.py -> def: create_coveragestore 中
+                   ! 此时暂时放弃掉重写 layer 的这种思路，改为直接将需要提交的 data ，放在catalog.py -> def: create_coverageNcStore中(见其中todo)
     '''
 
-    def __init__(self, catalog: Catalog, name: str):
+    def __init__(self, catalog: Catalog, name: str, nativeName: str, title: str, nativeCVoverageName: str):
         super().__init__(catalog, name)
+        self.nativeName = nativeName
+        self.title = title
+        self.nativeCVoverageName = nativeCVoverageName
         root_node = (
             {'key': 'name', 'val': self.name}
         )
+        # 更新 dirty
+
+        self.dirty.update(dict(
+            name=write_string("name"),
+            title=write_string("type"),
+            nativeCoverageName=write_string("nativeCoverageName"),
+            nativeName=write_string("nativeName"),
+            # metadata=
+        ))
         pass
+
+    # TODO:[-] 注意需要重写 resource_type
+    resource_type = "coverage"
+
+    # TODO:[*] 建议所有的其他的属性重写,建议放在构造函数中
+    name = xml_property("name")
+    type = xml_property("type")
+    title = xml_property("title")
+    nativeCoverageName = xml_property("nativeCoverageName")
+    nativeName = xml_property("nativeName")
 
     @property
     def _base_msg_str(self):
@@ -357,7 +391,9 @@ class CoverageLayer(Layer):
         '''
             返回当前的 base_msg xml对象
         '''
-        base_msg_xml = XML(self._base_msg_str)
+        # TODO:[*] {AttributeError}'xml.etree.ElementTree.Element' object has no attribute 'getroot'
+        # base_msg_xml = XML(self._base_msg_str)
+        base_msg_xml = ElementTree(fromstring(self._base_msg_str))
         return base_msg_xml
 
     def insert_node(self, node: Dict[str, str], singleton=True):
@@ -370,15 +406,16 @@ class CoverageLayer(Layer):
         root_node = self.base_msg.getroot()
         # 需要判断是否已经包含指定的node
         if singleton:
-            if len(root_node.findall(node.key)) > 0:
+            if len(root_node.findall(node['key'])) > 0:
                 raise OSError
         # 创建需要直接插入的节点
-        child = Element(node.key)
-        child.text = node.val
+        child = Element(node['key'])
+        child.text = node['val']
         # 添加
         root_node.append(child)
+        ElementTree
         pass
 
-    @property
-    def message(self):
-        return
+    # @property
+    # def message(self):
+    #     return

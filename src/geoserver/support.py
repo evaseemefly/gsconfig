@@ -14,7 +14,9 @@ from tempfile import mkstemp
 from zipfile import ZipFile
 import os
 import abc
-from abc import abstractclassmethod,abstractmethod
+# 新加入的
+from abc import abstractclassmethod, abstractmethod
+from typing import Callable
 
 try:
     from urllib.parse import urljoin, quote, urlencode, urlparse
@@ -72,7 +74,7 @@ def build_url(base: str, seg: List[str], query: {} = None):
             segment = segment.encode('utf-8')
         return segment
 
-    # TODO:[*] ?
+    # TODO:[*] ? 生成器
     seg = (quote(clean_segment(s)) for s in seg)
     if query is None or len(query) == 0:
         query_string = ''
@@ -213,6 +215,10 @@ def write_dict(name):
 
 
 def write_metadata(name):
+    '''
+        TODO:[*] !注意此方法 目前看此方法需要重写，或重新实现
+    '''
+
     def write(builder, metadata):
         builder.start(name, dict())
         for k, v in metadata.items():
@@ -231,6 +237,20 @@ def write_metadata(name):
     return write
 
 
+def write_metadata_nc(name) -> Callable[[TreeBuilder, dict], None]:
+    def write(builder: TreeBuilder, metadata: dict) -> None:
+        builder.start(name, dict())
+        # 遍历传入的字典
+        for k, v in metadata.items():
+            builder.start("entry", dict(key=k))
+            if k == "COVERAGE_VIEW":
+                # 需要创建 coverageView
+                coverageview_xml(builder, v)
+        pass
+
+    return write
+
+
 class ResourceInfo(metaclass=abc.ABCMeta):
     '''
         TODO:[-] 20-03-09 需要由所有继承的子类实现一些方法，eg: href 等
@@ -238,10 +258,10 @@ class ResourceInfo(metaclass=abc.ABCMeta):
 
     # TODO:[-] 20-03-11 # 所有继承自ResourceInfo 的子类都需要声明 save_method 方法，用来指明 request的请求类型
     def __init__(self):
+        # TODO:[*] ? dom何用？
         self.dom = None
         # TODO:[*] 20-03-11 这个字典何用，被子类update
         self.dirty = dict()
-
 
     @property
     @abc.abstractmethod
@@ -266,6 +286,10 @@ class ResourceInfo(metaclass=abc.ABCMeta):
         self.fetch()
 
     def serialize(self, builder: TreeBuilder):
+        '''
+            TODO:[*] 若只在 ResourceInfo 中由 message 调用话，建议是改为私有方法
+        '''
+        # TODO:[] 20-03-16 向builder 中遍历插入 self.dirty
         # GeoServer will disable the resource if we omit the <enabled> tag,
         # so force it into the dirty dict before writing
         if hasattr(self, "enabled"):
@@ -274,18 +298,19 @@ class ResourceInfo(metaclass=abc.ABCMeta):
         if hasattr(self, "advertised"):
             self.dirty['advertised'] = self.advertised
 
-        # TODO:[*] 此处的wirters 是什么？
+        # TODO:[-] ?此处的 writers 是什么？ 注意此处的 writers 在 store.py -> DataStore 中定义了 类属性 writers=dict(xx)
         for k, writer in self.writers.items():
+            # todo:[-] ! 注意此处的 writer 是 store.py -> DataStore -> writers 中的字典,字典中val 对应的 是一个func(builder,b)——方法签名
+            # 字典类型 { 'xx':func}
             if k in self.dirty:
                 writer(builder, self.dirty[k])
 
     def message(self):
         '''
-            # TODO:[-] 20-03-13 在ResourceInfo中定义的方法，
-            最终返回的是需要提交的msg
-
+            # TODO:[-] 20-03-13 在ResourceInfo中定义的方法，最终返回的是需要提交的msg
             * 由于ResourceInfo是需要由子类继承的，所以self就是继承的子类
             eg: UnsavedCoverageStore
+             message 为 TreeBuilder 创建的 Element -> str
         '''
         builder = TreeBuilder()
         # 创建了一个 resource_type(每个子类会声明这个类变量) 的 treebuilder
@@ -355,6 +380,97 @@ def bbox_xml(builder, box):
         builder.start("crs", {"class": "projected"})
         builder.data(crs)
         builder.end("crs")
+
+
+def coverageview_xml(builder: TreeBuilder, metadata: dict):
+    '''
+        TODO:[-] + 创建 coverageview
+        创建 coverage stores -> data -> coverage -> metadata -> entry :key='coverage_view' -> coverageview
+    '''
+    # 此处需要加入判断metadata 是否为字典
+    if isinstance(metadata, dict):
+        # 目前存在的问题是 由于存在 coverageBands 是一个 coverageBand的数组，
+        for k, v in metadata.items():
+            if k.lower() == 'coverageview':
+                # k: entry -> coverageView
+                # v: entry -> coverageView -> coverageBands
+                builder.start(k, dict())
+                # 里面是一个数组，需要对数组进行循环
+                for k_1, v_1 in v.items():
+                    # k_1: entry -> coverageView -> coverageBands
+                    # v_1: entry -> coverageView -> coverageBands -[coverageband_1,coverageband_2]
+                    if k_1.lower() == 'coveragebands':
+                        builder.start('coverageBands')
+                        for k_band, v_band in v_1.items():
+                            # k_band:'coverageband_1'
+                            # v_band: entry -> coverageView -> coverageBands- > {}
+                            coverageBand_info(builder, v_band)
+                        builder.end('coverageBands')
+                pass
+                builder.end(k)
+
+        pass
+    pass
+
+
+def coverageBand_info(builder: TreeBuilder, data: dict):
+    '''
+        多路 band
+    '''
+    if isinstance(data, dict):
+        builder.start('coverageBand')
+        for k, v in data.items():
+            # inputCoverageBands
+            # definition
+            # index
+            # compositionType
+
+            if k.lower() == 'definition':
+                builder.start(k, dict())
+                builder.data(str(v))
+                builder.end(k)
+                pass
+            elif k.lower() == 'index':
+                builder.start(k, dict())
+                builder.data(str(v))
+                builder.end(k)
+                pass
+            elif k.lower() == 'inputcoveragebands':
+                builder.start(k, dict())
+                for k_input, v_input in v.items():
+                    if k_input.lower() == 'inputcoverageband':
+                        builder.start(k_input, dict())
+                        # if hasattr(v_input, 'coverageName'):
+                        if v_input.get('coverageName'):
+                            builder.start('coverageName', dict())
+                            builder.data(v_input.get('coverageName'))
+                            builder.end('coverageName')
+                        builder.end(k_input)
+                builder.end(k)
+                pass
+            elif k.lower() == 'compositiontype':
+                builder.start(k, dict())
+                builder.data(str(v))
+                builder.end(k)
+                pass
+
+            # if ('coverageband' in k.lower()) and isinstance(v, dict):
+            #     for k_band_temp, v_band_temp in v.items():
+            #         #
+            #         pass
+            #
+            # pass
+
+            # 多路 band
+            # if k.lower() == 'inputcoveragebands' and isinstance(v, dict):
+            #     builder.start('coveragebands', dict())
+            #     # coveragebands -> coverageband
+            #     for k_band, v_band in v.items():
+            #         #
+            #         pass
+            #     builder.end('coveragebands')
+        builder.end('coverageBand')
+    pass
 
 
 def dimension_info(builder, metadata):
@@ -465,7 +581,9 @@ class DimensionInfo(object):
 
 
 def md_dimension_info(name, node):
-    """Extract metadata Dimension Info from an xml node"""
+    """Extract metadata Dimension Info from an xml node
+        从 xml 节点中提取元数据维信息
+    """
 
     def _get_value(child_name):
         return getattr(node.find(child_name), 'text', None)
