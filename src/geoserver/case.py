@@ -1,9 +1,10 @@
-from support import coverageview_meta_info,coverageview_xml
+from support import coverageview_meta_info, coverageview_xml
 from catalog import Catalog
 from layer import CoverageLayer
 from xml.etree.ElementTree import TreeBuilder, tostring, XMLParser
 # 新加入的mid model
 from mid_model import CoverageDimensionMidModel
+
 
 def coverage_meta_xml():
     builder = TreeBuilder()
@@ -29,12 +30,12 @@ def coverage_meta_xml():
     coverageview_meta_info(builder, dict_meta)
     return builder
 
+
 def coverage_xml():
     '''
         测试 创建 metadata node
         测试: 成功
     '''
-
 
     dict_meta = dict(
         coverageview=dict(
@@ -55,7 +56,7 @@ def coverage_xml():
             )
         )
     )
-    dict_coverage=dict(
+    dict_coverage = dict(
         name='ceshi_coverage_01',
         nativeName='ceshi_coverage_01',
         namespace=dict(
@@ -65,10 +66,31 @@ def coverage_xml():
         title='ceshi_coverage_01',
         description='Generated from NetCDF',
         nativeCoverageName='ceshi_coverage_01',
-        metadata=dict_meta,
+        # metadata=dict_meta,
+        metadata=[
+            dict(
+                key='COVERAGE_VIEW',
+                name='entry',
+                tag='',
+                val=dict_meta
+            ),
+            dict(
+                key='cachingEnabled',
+                name='entry',
+                tag='',
+                val='false'
+            ),
+            dict(
+                key='dirName',
+                name='entry',
+                tag='',
+                val='nmefc_wind_dir_xy_view_nmefc_wind'
+            )
+        ],
         store='',
         dimensions=dict(
-            coverageDimension_1=CoverageDimensionMidModel('x_wind_10m','GridSampleDimension[-Infinity,Infinity]',['-inf','inf'],'REAL_32BITS'),
+            coverageDimension_1=CoverageDimensionMidModel('x_wind_10m', 'GridSampleDimension[-Infinity,Infinity]',
+                                                          ['-inf', 'inf'], 'REAL_32BITS'),
             coverageDimension_2=CoverageDimensionMidModel('y_wind_10m', 'GridSampleDimension[-Infinity,Infinity]',
                                                           ['-inf', 'inf'], 'REAL_32BITS'),
 
@@ -81,17 +103,18 @@ def coverage_xml():
 
     )
     # builder = TreeBuilder()
-    builder=coverageview_xml(dict_coverage)
+    builder = coverageview_xml(dict_coverage)
     # coverageview_meta_info(builder, dict_meta)
     return builder
 
     pass
 
+
 def info_xml():
     builder = TreeBuilder()
-    builder.start('root',dict())
+    builder.start('root', dict())
     builder.data('ceshi')
-    builder.start('child',dict())
+    builder.start('child', dict())
     builder.data('child_1_data')
     builder.end('child')
     builder.end('root')
@@ -107,15 +130,14 @@ def create_nc_layer():
     '''
     ws_name: str = 'my_test_2'
     cat: Catalog = Catalog("http://localhost:8082/geoserver/rest", username="admin", password="geoserver")
-    layer=CoverageLayer(cat, 'ceshi_name', 'ceshi_native_name', 'ceshi_tile', 'ceshi_native_coveragename')
+    layer = CoverageLayer(cat, 'ceshi_name', 'ceshi_native_name', 'ceshi_tile', 'ceshi_native_coveragename')
     layer.message()
-
 
     pass
 
 
 def main():
-    builder= coverage_xml()
+    builder = coverage_xml()
     # create_nc_layer()
     # builder=info_xml()
     # 测试可行

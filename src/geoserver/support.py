@@ -419,6 +419,7 @@ def coverageview_xml(info: dict):
             # root.end('namespace')
         # metadata
         elif father_k.lower() == 'metadata':
+            # 创建 coverage stores -> data -> coverage ->  metadata -> entry :key='coverage_view' ->  coverageview
             coverageview_meta_info(root, father_v)
         elif father_k.lower() == 'dimensions':
             covreageview_dimensions_info(root, father_v, name='dimensions')
@@ -449,33 +450,72 @@ def coverageview_namespace_info(builder: TreeBuilder, info: dict, name: str = No
             builder.end(name)
 
 
-def coverageview_meta_info(builder: TreeBuilder, metadata: dict, name: str = None):
+def coverageview_meta_info(builder: TreeBuilder, metadata: List[dict], name: str = None):
     '''
         TODO:[-] + 创建 coverageview
-        创建 coverage stores -> data -> coverage -> [+] metadata -> entry :key='coverage_view' -> coverageview
+
     '''
-    # 此处需要加入判断metadata 是否为字典
-    if isinstance(metadata, dict):
+    # 此处需要加入判断metadata 是否为list
+    if isinstance(metadata, list):
         # 目前存在的问题是 由于存在 coverageBands 是一个 coverageBand的数组，
-        for k, v in metadata.items():
-            if k.lower() == 'coverageview':
-                # k: entry -> coverageView
-                # v: entry -> coverageView -> coverageBands
-                builder.start(k, dict())
-                # 里面是一个数组，需要对数组进行循环
-                for k_1, v_1 in v.items():
+        # 创建 coverage stores -> data -> coverage(root) -> [+]  metadata -> entry :key='coverage_view' ->  coverageview
+        builder.start('metadata')
+        # 下面需要改为循环一个数组
+        for v in metadata:
+            # if 'key' in v.items():
+            if v.get('key').lower() == 'coverage_view':
+                builder.start(v.get('name'), dict(key=v.get('key')))
+                for k_1, v_1 in v.get('val').items():
                     # k_1: entry -> coverageView -> coverageBands
                     # v_1: entry -> coverageView -> coverageBands -[coverageband_1,coverageband_2]
-                    if k_1.lower() == 'coveragebands':
-                        builder.start('coverageBands')
-                        for k_band, v_band in v_1.items():
-                            # k_band:'coverageband_1'
-                            # v_band: entry -> coverageView -> coverageBands- > {}
-                            coverageBand_info(builder, v_band)
-                        builder.end('coverageBands')
-                pass
-                builder.end(k)
+                    if k_1.lower() == 'coverageview':
+                        builder.start('coverageView')
+                        for k_bands, v_bands in v_1.items():
+                            if k_bands.lower() == 'coveragebands':
+                                builder.start('coverageBands')
+                                for k_band, v_band in v_bands.items():
+                                    # k_band:'coverageband_1'
+                                    # v_band: entry -> coverageView -> coverageBands- > {}
+                                    coverageBand_info(builder, v_band)
+                                builder.end('coverageBands')
+                            pass
+                        builder.end('coverageView')
 
+                builder.end(v.get('name'))
+            elif v.get('key').lower() == 'cachingEnabled'.lower():
+                builder.start(v.get('name'), dict(key=v.get('key')))
+                builder.data(v.get('val'))
+                builder.end(v.get('name'))
+            elif v.get('key').lower() == 'dirName'.lower():
+                builder.start(v.get('name'), dict(key=v.get('key')))
+                builder.data(v.get('val'))
+                builder.end(v.get('name'))
+
+            # TODO:[*] 20-03-18 以下为暂时的备份
+        # for k, v in metadata.items():
+        #     if k.lower() == 'coverageview':
+        #         # 创建 coverage stores -> data -> coverage ->  metadata -> [+] entry :key='coverage_view' -> coverageview
+        #         builder.start('entry')
+        #         # 创建 coverage stores -> data -> coverage ->  metadata -> entry :key='coverage_view' -> [+] coverageview
+        #         # k: entry -> coverageView
+        #         # v: entry -> coverageView -> coverageBands
+        #         builder.start(k, dict())
+        #         # 里面是一个数组，需要对数组进行循环
+        #         for k_1, v_1 in v.items():
+        #             # k_1: entry -> coverageView -> coverageBands
+        #             # v_1: entry -> coverageView -> coverageBands -[coverageband_1,coverageband_2]
+        #             if k_1.lower() == 'coveragebands':
+        #                 builder.start('coverageBands')
+        #                 for k_band, v_band in v_1.items():
+        #                     # k_band:'coverageband_1'
+        #                     # v_band: entry -> coverageView -> coverageBands- > {}
+        #                     coverageBand_info(builder, v_band)
+        #                 builder.end('coverageBands')
+        #         pass
+        #         builder.end(k)
+        #         builder.end('entry')
+        #
+        builder.end('metadata')
         pass
     pass
 
