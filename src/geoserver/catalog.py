@@ -69,6 +69,9 @@ try:
 except ImportError:
     JSONDecodeError = ValueError
 
+# TODO:[-] + 20-03-18 新加入的mid model
+from mid_model import CoverageDimensionMidModel
+
 logger = logging.getLogger("gsconfig.catalog")
 
 
@@ -742,6 +745,7 @@ class Catalog(object):
                 source_name = os.path.splitext(os.path.basename(path))[0]
         # TODO:[-] 此处为难点，需要生成一个提交的data
         # TODO:[*] 20-03-17 将之前错误放置在 layer 中的生成 xml的方法放在此处
+
         pass
 
     def add_granule(self, data, store, workspace=None):

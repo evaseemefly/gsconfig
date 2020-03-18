@@ -29,6 +29,9 @@ try:
 except ImportError:
     pass
 
+# TODO:[-] + 20-03-18 引入的 mid model
+from mid_model import CoverageDimensionMidModel
+
 logger = logging.getLogger("gsconfig.support")
 
 FORCE_DECLARED = "FORCE_DECLARED"
@@ -382,10 +385,74 @@ def bbox_xml(builder, box):
         builder.end("crs")
 
 
-def coverageview_xml(builder: TreeBuilder, metadata: dict):
+def coverageview_xml(info: dict):
+    '''
+        用来创建 coverageview 的 xml builder
+    '''
+    # TODO:[*] 20-03-18 可能引发错误
+    # xml.etree.ElementTree.ParseError: multiple elements on top level
+    root = TreeBuilder()
+    root.start('coverage')
+    for father_k, father_v in info.items():
+        # 几个固定的
+        if father_k.lower() == 'name':
+            root.start(father_k, dict())
+            root.data(father_v)
+            root.end(father_k)
+        elif father_k.lower() == 'nativename':
+            root.start(father_k, dict())
+            root.data(father_v)
+            root.end(father_k)
+        elif father_k.lower() == 'title':
+            root.start(father_k, dict())
+            root.data(father_v)
+            root.end(father_k)
+        elif father_k.lower() == 'nativecoveragename':
+            root.start(father_k, dict())
+            root.data(father_v)
+            root.end(father_k)
+        # 几个复杂类型
+        # namespace :[name,atom]
+        elif father_k.lower() == 'namespace':
+            # root.start('namespace')
+            coverageview_namespace_info(root, father_v, name='namespace')
+            # root.end('namespace')
+        # metadata
+        elif father_k.lower() == 'metadata':
+            coverageview_meta_info(root, father_v)
+        elif father_k.lower() == 'dimensions':
+            covreageview_dimensions_info(root, father_v, name='dimensions')
+            pass
+    root.end('coverage')
+    return root
+    pass
+
+
+def coverageview_namespace_info(builder: TreeBuilder, info: dict, name: str = None):
+    '''
+        TODO:[-] + 创建 namespace
+                coverage stores -> data -> coverage -> [+] namespace
+    '''
+    if isinstance(info, dict):
+        if name is not None:
+            builder.start(name)
+        for k, v in info.items():
+            if k.lower() == 'name':
+                builder.start(k)
+                builder.data(v)
+                builder.end(k)
+            elif k.lower() == 'atom':
+                builder.start(k)
+                builder.data(v)
+                builder.end(k)
+        if name is not None:
+            builder.end(name)
+
+
+def coverageview_meta_info(builder: TreeBuilder, metadata: dict, name: str = None):
     '''
         TODO:[-] + 创建 coverageview
-        创建 coverage stores -> data -> coverage -> metadata -> entry :key='coverage_view' -> coverageview
+        创建 coverage stores -> data -> coverage -> [+] metadata -> entry :key='coverage_view' -> coverageview
     '''
     # 此处需要加入判断metadata 是否为字典
     if isinstance(metadata, dict):
@@ -470,6 +537,60 @@ def coverageBand_info(builder: TreeBuilder, data: dict):
             #         pass
             #     builder.end('coveragebands')
         builder.end('coverageBand')
+    pass
+
+
+def covreageview_dimensions_info(builder: TreeBuilder, data: dict, name: str = None):
+    '''
+        TODO:[-] + 创建 namespace
+                coverage stores -> data -> coverage -> [+] dimensions
+    '''
+    # 将 dict -> dimensions 数组
+    if isinstance(data, dict):
+        if name is not None:
+            builder.start(name)
+        for k, v in data.items():
+            if 'coveragedimension' in k.lower():
+                # 是一个数组
+                builder.start('coverageDimension')
+                if isinstance(v, CoverageDimensionMidModel):
+                    coverageDimension_info(builder, v)
+                builder.end('coverageDimension')
+                # for item in data.get('dimensions'):
+        if name is not None:
+            builder.end(name)
+    pass
+
+
+def coverageDimension_info(builder: TreeBuilder, data: CoverageDimensionMidModel):
+    '''
+        TODO:[-] + 创建 coverageDimension
+                 coverage stores -> data -> coverage -> dimensions -> [+] coverageDimension
+    '''
+    if isinstance(data, CoverageDimensionMidModel):
+        # name
+        builder.start('name', dict())
+        builder.data(data.name)
+        builder.end('name')
+        # desc
+        builder.start('description')
+        builder.data(data.des)
+        builder.end('description')
+        # type
+        builder.start('dimensionType')
+        builder.start('name')
+        builder.data(data.type)
+        builder.end('name')
+        builder.end('dimensionType')
+        #
+        builder.start('range')
+        builder.start('min')
+        builder.data(data.range[0])
+        builder.end('min')
+        builder.start('max')
+        builder.data(data.range[1])
+        builder.end('max')
+        builder.end('range')
     pass
 
 

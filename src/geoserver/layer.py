@@ -258,11 +258,11 @@ class CoverageLayer(Layer):
     resource_type = "coverage"
 
     # TODO:[*] 建议所有的其他的属性重写,建议放在构造函数中
-    name = xml_property("name")
-    type = xml_property("type")
-    title = xml_property("title")
-    nativeCoverageName = xml_property("nativeCoverageName")
-    nativeName = xml_property("nativeName")
+    # name = xml_property("name")
+    # type = xml_property("type")
+    # title = xml_property("title")
+    # nativeCoverageName = xml_property("nativeCoverageName")
+    # nativeName = xml_property("nativeName")
 
     @property
     def _base_msg_str(self):
