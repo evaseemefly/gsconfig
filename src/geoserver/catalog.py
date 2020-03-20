@@ -9,6 +9,13 @@ __author__ = "David Winslow"
 __copyright__ = "Copyright 2012-2018 Boundless, Copyright 2010-2012 OpenPlans"
 __license__ = "MIT"
 
+import sys
+
+# TODO:[-] 20-03-12 此处使用修改后的gsconfig
+# BUILD_SRC = r'D:\01proj\源码\gsconfig'
+BUILD_SRC = r'/Users/evaseemefly/Documents/01Proj/部分源码/gis/gsconfig'
+# sys.path.append(BUILD_SRC)
+
 from datetime import datetime, timedelta
 import logging
 from geoserver.layer import Layer
