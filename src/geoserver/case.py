@@ -312,6 +312,23 @@ def create_nc_coverage():
     pass
 
 
+def bind_style_coverage():
+    '''
+        将 已经存在的 style 与 已经发布的 coverage 进行绑定
+    '''
+    style_name = 'wind_dir_style'
+    sld_style = f'''
+                
+                        <layer>
+                            <defaultStyle>
+                                <name>{style_name}</name>
+                            </defaultStyle>
+                        </layer>
+               '''
+    url_cat = 'http://localhost:8080/geoserver/rest'
+    cat = Catalog(url_cat, username='admin', password='geoserver')
+
+
 def main():
     builder = coverage_xml()
     # create_nc_layer()
