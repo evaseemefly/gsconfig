@@ -131,6 +131,7 @@ class Catalog(object):
 
     def __init__(self, service_url: str, username="admin", password="geoserver", validate_ssl_certificate=True,
                  access_token=None):
+        #
         # TODO:[*] 注意一下此处的 service_url 由 str 被拆分为 数组
         self.service_url: List[str] = service_url.strip("/")
         self.username = username

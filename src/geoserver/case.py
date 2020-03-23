@@ -3,10 +3,15 @@ import requests
 
 from support import coverageview_meta_info, coverageview_xml
 from catalog import Catalog
-from layer import CoverageLayer
+from resource import Coverage
+# from layer import CoverageLayer
+from workspace import Workspace
+from store import CoverageStore
 from xml.etree.ElementTree import TreeBuilder, tostring, XMLParser
 # 新加入的mid model
 from mid_model import CoverageDimensionMidModel
+from customer_layer import CoverageLayer
+from typing import List, Dict
 
 
 def coverage_meta_xml():
@@ -34,9 +39,16 @@ def coverage_meta_xml():
     return builder
 
 
+# def coverage_xml(ws: str, layer_name: str, store_name: str, bands: List[Dict[str, str]]):
 def coverage_xml():
     '''
         测试 创建 metadata node
+        # NOTE: 需要传入的有
+                coverage_name:
+                layer_name:               xx
+                layer_title:              ws:xx
+                store_name:                    nmefc_xxx_store_1
+                bands:                    []
         测试: 成功
     '''
 
@@ -156,7 +168,7 @@ def create_nc_layer():
     ws_name: str = 'my_test_2'
     cat: Catalog = Catalog("http://localhost:8082/geoserver/rest", username="admin", password="geoserver")
     layer = CoverageLayer(cat, 'ceshi_name', 'ceshi_native_name', 'ceshi_tile', 'ceshi_native_coveragename')
-    layer.message()
+    # layer.message()
 
     pass
 
@@ -166,12 +178,13 @@ def create_nc_coverage():
     msg = tostring(builder.close(), encoding='utf-8', method='xml')
     # 测试一下提交
     coverage_title = 'ceshi_coverage_01'
-    store_name = 'nmefc_wind'
+    store_name = 'nmefc_2016072112_opdr'
     coveragestore = 'nmefc_wind'
     WORK_SPACE = 'ceshi'
     # TODO:此种方式提交的有多路band
 
     headers_xml = {'content-type': 'text/xml'}
+    #
     # TODO:[-] 20-03-19 提交时出现一个错误
     # 错误1: 已解决
     # requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', port=8082): Max retries exceeded with url: /geoserver/rest/workspaces/ceshi/coveragestores/nmefc_wind/coverages (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x122c3f3d0>: Failed to establish a new connection: [Errno 61] Connection refused'))
@@ -312,6 +325,26 @@ def create_nc_coverage():
     pass
 
 
+def create_nc_coverage_merage_resource():
+    '''
+        # NOTE: 尝试将创建 nc coverage 使用 -> resource.py -> Coverage 的方式实现
+        # TODO:[-] 20-03-23
+    '''
+    coverage_title = 'ceshi_coverage_01'
+    store_name = 'nmefc_wind_dir_xy'
+    coveragestore = 'nmefc_wind'
+    WORK_SPACE = 'SearchRescue'
+    cat: Catalog = Catalog("http://localhost:8082/geoserver/rest", username="admin", password="geoserver")
+    ws = Workspace(cat, 'SearchRescue')
+    store = CoverageStore(cat, ws, 'nmefc_wind_dir_xy')
+
+    # layer = CoverageLayer(cat, 'ceshi_name', 'ceshi_native_name', 'ceshi_tile', 'ceshi_native_coveragename')
+    # coverage = Coverage(cat, ws, store, 'view_nmefc_wind')
+    coverage = CoverageLayer(cat, WORK_SPACE)
+    coverage.create_layer(coverage_title,store_name,[dict(name='x_wind_10m'),dict(name='y_wind_10m')])
+    pass
+
+
 def bind_style_coverage():
     '''
         将 已经存在的 style 与 已经发布的 coverage 进行绑定
@@ -338,7 +371,10 @@ def main():
     msg = tostring(builder.close(), encoding='utf-8', method='xml')
     print(msg)
     # 测试post 提交 coverage
-    create_nc_coverage()
+    # TODO:[*] 20-03-23 下面暂时注释掉
+    # create_nc_coverage()
+    # TODO:[*] 20-03-23 开始实现基于 gsconfig 的 create_coverage
+    create_nc_coverage_merage_resource()
     pass
 
 
