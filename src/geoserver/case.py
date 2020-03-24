@@ -331,17 +331,28 @@ def create_nc_coverage_merage_resource():
         # TODO:[-] 20-03-23
     '''
     coverage_title = 'ceshi_coverage_01'
-    store_name = 'nmefc_wind_dir_xy'
-    coveragestore = 'nmefc_wind'
-    WORK_SPACE = 'SearchRescue'
+    # TODO:[*] 20-03-24 注意此处会引发严重bug，在指定 工作区 下若不存在指定的 store 会出现 错误
+    store_name = 'nmefc_2016072112_opdr'
+    coverage_store = 'nmefc_wind'
+    layer_name='ceshi_coverage_01'
+    work_space = 'my_test_2'
     cat: Catalog = Catalog("http://localhost:8082/geoserver/rest", username="admin", password="geoserver")
-    ws = Workspace(cat, 'SearchRescue')
+    ws = Workspace(cat, work_space)
     store = CoverageStore(cat, ws, 'nmefc_wind_dir_xy')
 
     # layer = CoverageLayer(cat, 'ceshi_name', 'ceshi_native_name', 'ceshi_tile', 'ceshi_native_coveragename')
     # coverage = Coverage(cat, ws, store, 'view_nmefc_wind')
-    coverage = CoverageLayer(cat, WORK_SPACE)
-    coverage.create_layer(coverage_title,store_name,[dict(name='x_wind_10m'),dict(name='y_wind_10m')])
+
+    # TODO:[-] 20-03-24 使用 -> customer_layer -> CoverageLayer
+    # coverage = CoverageLayer(cat, WORK_SPACE)
+    # coverage.create_layer(coverage_title, store_name, [dict(name='x_wind_10m'), dict(name='y_wind_10m')])
+    bands=[dict(
+        name='x_wind_10m'
+    ),
+    dict(name='y_wind_10m')]
+    coverage_layer=CoverageLayer(cat,work_space,store_name)
+    # TODO:[*] 20-03-24 此处若使用 layer_name:ceshi_coverage_01 而不使用 coverage_store:nmefc_wind 则会引发 msg 的bug
+    coverage_layer.publish(layer_name,bands)
     pass
 
 
