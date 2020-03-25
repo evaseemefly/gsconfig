@@ -30,7 +30,7 @@ class CoverageLayer:
         '''
         builder = coverageview_xml(self.dict_coverage)
         msg = tostring(builder.close(), encoding='utf-8', method='xml')
-        print(msg)
+        # print(msg)
         return msg
 
     dict_coverage = dict(
@@ -131,7 +131,7 @@ class CoverageLayer:
                     })
                     # print(i, v)
                     pass
-                print(self.dict_meta)
+                # print(self.dict_meta)
                 self._generate_coverage_dict(layer_name, store_name, layer_name, layer_name, bands)
                 pass
 
