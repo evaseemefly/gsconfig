@@ -15,7 +15,7 @@ import sys
 # BUILD_SRC = r'D:\01proj\源码\gsconfig'
 BUILD_SRC = r'/Users/evaseemefly/Documents/01Proj/部分源码/gis/gsconfig'
 # caiwb 2020-03-26
-BUILD_SRC = r'E:\Lab\python lab\gsconfig'
+# BUILD_SRC = r'E:\Lab\python lab\gsconfig'
 # sys.path.append(BUILD_SRC)
 
 from datetime import datetime, timedelta
