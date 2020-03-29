@@ -11,6 +11,7 @@ from xml.etree.ElementTree import TreeBuilder, tostring, XMLParser
 # 新加入的mid model
 from mid_model import CoverageDimensionMidModel
 from customer_layer import CoverageLayer
+from customer_style import bind_layer_style
 from typing import List, Dict
 
 
@@ -334,9 +335,9 @@ def create_nc_coverage_merage_resource():
     # TODO:[*] 20-03-24 注意此处会引发严重bug，在指定 工作区 下若不存在指定的 store 会出现 错误
     store_name = 'nmefc_2016072112_opdr'
     coverage_store = 'nmefc_wind'
-    layer_name='ceshi_coverage_01'
+    layer_name = 'ceshi_coverage_01'
     work_space = 'my_test_2'
-    cat: Catalog = Catalog("http://localhost:8082/geoserver/rest", username="admin", password="geoserver")
+    cat: Catalog = Catalog("http://localhost:8080/geoserver/rest", username="admin", password="geoserver")
     ws = Workspace(cat, work_space)
     store = CoverageStore(cat, ws, 'nmefc_wind_dir_xy')
 
@@ -346,34 +347,28 @@ def create_nc_coverage_merage_resource():
     # TODO:[-] 20-03-24 使用 -> customer_layer -> CoverageLayer
     # coverage = CoverageLayer(cat, WORK_SPACE)
     # coverage.create_layer(coverage_title, store_name, [dict(name='x_wind_10m'), dict(name='y_wind_10m')])
-    bands=[dict(
+    bands = [dict(
         name='x_wind_10m'
     ),
-    dict(name='y_wind_10m')]
-    coverage_layer=CoverageLayer(cat,work_space,store_name)
+        dict(name='y_wind_10m')]
+    coverage_layer = CoverageLayer(cat, work_space, store_name)
     # TODO:[*] 20-03-24 此处若使用 layer_name:ceshi_coverage_01 而不使用 coverage_store:nmefc_wind 则会引发 msg 的bug
-    coverage_layer.publish(layer_name,bands)
+    coverage_layer.publish(layer_name, bands)
     pass
 
 
-def bind_style_coverage():
+def bind_style_coverage(server_url: str, layer_name: str, style_name: str, coverage_title: str, work_space: str):
     '''
         将 已经存在的 style 与 已经发布的 coverage 进行绑定
     '''
-    style_name = 'wind_dir_style'
-    sld_style = f'''
-                
-                        <layer>
-                            <defaultStyle>
-                                <name>{style_name}</name>
-                            </defaultStyle>
-                        </layer>
-               '''
-    url_cat = 'http://localhost:8080/geoserver/rest'
-    cat = Catalog(url_cat, username='admin', password='geoserver')
+
+    cat = Catalog(server_url, username='admin', password='geoserver')
+    bind_layer_style(cat, layer_name, style_name, coverage_title, work_space)
 
 
 def main():
+    server_url = 'http://localhost:8080/geoserver/rest'
+    work_space = 'my_test_2'
     builder = coverage_xml()
     # create_nc_layer()
     # builder=info_xml()
@@ -382,10 +377,15 @@ def main():
     msg = tostring(builder.close(), encoding='utf-8', method='xml')
     print(msg)
     # 测试post 提交 coverage
-    # TODO:[*] 20-03-23 下面暂时注释掉
+    # TODO:[-] 20-03-23 下面暂时注释掉
     # create_nc_coverage()
-    # TODO:[*] 20-03-23 开始实现基于 gsconfig 的 create_coverage
-    create_nc_coverage_merage_resource()
+    # TODO:[-] 20-03-23 case2: 开始实现基于 gsconfig 的 create_coverage
+    # create_nc_coverage_merage_resource()
+    # TODO:[*] 20-03-26 case3: 测试 style 绑定
+    layer_name = 'my_test_2:ceshi_coverage_01'
+    coverage_title = 'ceshi_coverage_01'
+    style_name = 'wind_dir_style'
+    bind_style_coverage(server_url, layer_name, style_name, coverage_title, work_space)
     pass
 
 

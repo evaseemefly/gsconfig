@@ -21,7 +21,7 @@ class CoverageLayer:
             eg: http://localhost:8082/geoserver/rest/workspaces/Searchrescue/coveragestores/nmefc_wind_dir_xy/coverages
             对比:http://localhost:8082/geoserver/rest/workspaces/my_test_2/coveragestores/nmefc_wind/coverages
         '''
-        return f'http://localhost:8082/geoserver/rest/workspaces/{self.work_space}/coveragestores/{self.store_name}/coverages'
+        return f'http://localhost:8080/geoserver/rest/workspaces/{self.work_space}/coveragestores/{self.store_name}/coverages'
 
     @property
     def msg(self):
