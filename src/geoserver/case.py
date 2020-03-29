@@ -1,5 +1,6 @@
-import os
+import os,sys
 import requests
+# print(sys.path)
 
 from support import coverageview_meta_info, coverageview_xml
 from catalog import Catalog
