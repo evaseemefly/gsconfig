@@ -180,6 +180,7 @@ class Layer(ResourceInfo):
     def _set_alternate_styles(self, styles):
         self.dirty["alternate_styles"] = styles
 
+    # TODO:[*] 20-03-20 设置默认style
     default_style = property(_get_default_style, _set_default_style)
     styles = property(_get_alternate_styles, _set_alternate_styles)
 
