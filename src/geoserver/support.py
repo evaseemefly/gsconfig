@@ -424,6 +424,29 @@ def coverageview_xml(info: dict):
         elif father_k.lower() == 'dimensions':
             covreageview_dimensions_info(root, father_v, name='dimensions')
             pass
+        # TODO:[-] + 20-03-19 新增的部分
+        elif father_k.lower() in [temp.lower() for temp in ['enabled', 'nativeFormat', 'defaultInterpolationMethod']]:
+            root.start(father_k)
+            root.data(father_v)
+            root.end(father_k)
+        # 里面是嵌套的字典
+        elif father_k.lower() in [temp.lower() for temp in ['requestSRS', 'responseSRS']]:
+            root.start(father_k)
+            if isinstance(father_v, dict):
+                for k, v in father_v.items():
+                    root.start(k)
+                    root.data(v)
+                    root.end(k)
+            root.end(father_k)
+        # store 节点
+        elif father_k.lower() == 'store':
+            coverageview_store_info(root, father_v)
+            pass
+            # root.start(father_v)
+            # if isinstance(father_v,dict):
+            #     for k,v in father_v.items():
+            #
+            # root.end(father_v)
     root.end('coverage')
     return root
     pass
@@ -478,6 +501,12 @@ def coverageview_meta_info(builder: TreeBuilder, metadata: List[dict], name: str
                                     # v_band: entry -> coverageView -> coverageBands- > {}
                                     coverageBand_info(builder, v_band)
                                 builder.end('coverageBands')
+                            elif k_bands.lower() in [temp.lower() for temp in
+                                                     ['name', 'envelopeCompositionType', 'selectedResolution',
+                                                      'selectedResolutionIndex']]:
+                                builder.start(k_bands)
+                                builder.data(v_bands)
+                                builder.end(k_bands)
                             pass
                         builder.end('coverageView')
 
@@ -518,6 +547,17 @@ def coverageview_meta_info(builder: TreeBuilder, metadata: List[dict], name: str
         builder.end('metadata')
         pass
     pass
+
+
+def coverageview_store_info(builder: TreeBuilder, data: dict, name='store'):
+    # if 'classname' in data.items():
+    if data.get('classname'):
+        builder.start(name, {'class': data.get('classname')})
+        builder.start('name')
+        builder.data(data.get('name', None))
+        builder.end('name')
+        builder.end(name)
+        pass
 
 
 def coverageBand_info(builder: TreeBuilder, data: dict):

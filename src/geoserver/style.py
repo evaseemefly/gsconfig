@@ -110,6 +110,9 @@ class Style(ResourceInfo):
         return resp.content
 
     def update_body(self, body):
+        '''
+            更新已经存在的style
+        '''
         headers = {"Content-Type": self.content_type}
         self.catalog.http.request(
             self.body_href, "PUT", body, headers)

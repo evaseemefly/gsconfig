@@ -9,6 +9,15 @@ __author__ = "David Winslow"
 __copyright__ = "Copyright 2012-2018 Boundless, Copyright 2010-2012 OpenPlans"
 __license__ = "MIT"
 
+import sys
+
+# TODO:[-] 20-03-12 此处使用修改后的gsconfig
+# BUILD_SRC = r'D:\01proj\源码\gsconfig'
+# caiwb 2020-03-26
+#BUILD_SRC = r'/Users/evaseemefly/Documents/01Proj/部分源码/gis/gsconfig'
+BUILD_SRC = r'E:\Lab\python lab\gsconfig'
+# sys.path.append(BUILD_SRC)
+
 from datetime import datetime, timedelta
 import logging
 from geoserver.layer import Layer
@@ -124,6 +133,7 @@ class Catalog(object):
 
     def __init__(self, service_url: str, username="admin", password="geoserver", validate_ssl_certificate=True,
                  access_token=None):
+        #
         # TODO:[*] 注意一下此处的 service_url 由 str 被拆分为 数组
         self.service_url: List[str] = service_url.strip("/")
         self.username = username
@@ -745,7 +755,23 @@ class Catalog(object):
                 source_name = os.path.splitext(os.path.basename(path))[0]
         # TODO:[-] 此处为难点，需要生成一个提交的data
         # TODO:[*] 20-03-17 将之前错误放置在 layer 中的生成 xml的方法放在此处
-
+        # TODO:[*] 20-03-20 将 case.py -> create_nc_coverage放在此处(已测试成功)
+        # TODO:[*] 20-03-20 当创建完coverage layer 后，需要手动的设置该 layer 的 style
+        headers_xml = {'content-type': 'text/xml'}
+        url_style=f'http://localhost:8082/geoserver/rest//workspaces/{WORK_SPACE}/layers/{coverage_title}'
+        xml_style=f'''
+                        <layer>
+                            <defaultStyle>
+                                <name>{style_name}</name>
+                            </defaultStyle>
+                        </layer>
+                    '''
+        response=requests.put(
+            url_style,
+            auth=('admin','geoserver'),
+            data=xml_style,
+            headers=headers_xml
+        )
         pass
 
     def add_granule(self, data, store, workspace=None):
