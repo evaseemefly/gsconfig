@@ -367,7 +367,9 @@ class Catalog(object):
           Will return an empty list if no stores are found.
         '''
 
-        if isinstance(workspaces, Workspace):
+        # TODO:[*] 20-03-30 注意下面的 workspace 是  geoserver.workspace.WorkSpace
+        from workspace import Workspace as workspace_relative
+        if isinstance(workspaces, Workspace) or isinstance(workspaces, workspace_relative):
             workspaces = [workspaces]
         elif isinstance(workspaces, list) and [w for w in workspaces if isinstance(w, Workspace)]:
             # nothing
@@ -713,10 +715,10 @@ class Catalog(object):
 
         return self.get_stores(names=name, workspaces=workspace)[0]
 
-    def create_coverageNCstore(self, name: str, workspace=None, path=None, store_type='netcdf', create_layer=True,
+    def create_coverageNCstore(self, name: str, workspace=None, path=None, store_type='NetCDF', create_layer=True,
                                layer_name=None, source_name=None, bands_names=[]):
         '''
-            TODO:[*] 20-03-14 ~ 03-17 自己实现的 nc coverage 方法
+            TODO:[-] 20-03-14 ~ 03-30 自己实现的 nc coverage 方法,创建layer不在此实现了
             准备自己实现的创建 nc 格式的coverage layer
         '''
         if path is None:
@@ -750,30 +752,16 @@ class Catalog(object):
         cs.url = path if path.startswith("file:") else "file:{}".format(path)
         self.save(cs)
         # TODO:[!] 此部分比较重要: 需要创建 layer
-        if create_layer:
-            if layer_name is None:
-                layer_name = os.path.splitext(os.path.basename(path))[0]
-            if source_name is None:
-                source_name = os.path.splitext(os.path.basename(path))[0]
+        # TODO:[-] 20-03-30 发布 layer的操作放在 customer_layer.py 中，以下部分不再使用
+        # if create_layer:
+        #     if layer_name is None:
+        #         layer_name = os.path.splitext(os.path.basename(path))[0]
+        #     if source_name is None:
+        #         source_name = os.path.splitext(os.path.basename(path))[0]
         # TODO:[-] 此处为难点，需要生成一个提交的data
         # TODO:[*] 20-03-17 将之前错误放置在 layer 中的生成 xml的方法放在此处
         # TODO:[*] 20-03-20 将 case.py -> create_nc_coverage放在此处(已测试成功)
         # TODO:[*] 20-03-20 当创建完coverage layer 后，需要手动的设置该 layer 的 style
-        headers_xml = {'content-type': 'text/xml'}
-        url_style=f'http://localhost:8082/geoserver/rest//workspaces/{WORK_SPACE}/layers/{coverage_title}'
-        xml_style=f'''
-                        <layer>
-                            <defaultStyle>
-                                <name>{style_name}</name>
-                            </defaultStyle>
-                        </layer>
-                    '''
-        response=requests.put(
-            url_style,
-            auth=('admin','geoserver'),
-            data=xml_style,
-            headers=headers_xml
-        )
         pass
 
     def add_granule(self, data, store, workspace=None):

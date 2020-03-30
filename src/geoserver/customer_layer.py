@@ -255,5 +255,7 @@ class CoverageLayer:
                 response = requests.post(self.href, auth=('admin', 'geoserver'), data=self.msg, headers=headers_xml)
                 if response.status_code in [200, 201]:
                     return response
+                # else:
+                #     raise
         except LayerError as layerErr:
             print(f'已经存在重名的layer:{layerErr.title}')

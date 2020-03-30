@@ -13,8 +13,13 @@ from xml.etree.ElementTree import TreeBuilder, tostring, XMLParser
 from mid_model import CoverageDimensionMidModel
 from customer_layer import CoverageLayer
 from customer_style import bind_layer_style
+from customer_store import CoverageNcStore
 
 from typing import List, Dict
+
+REST_URL='http://localhost:8082/geoserver/rest'
+STORE_NAME='nmefc_2016072112_opdr_test_1'
+WORK_SPACE='my_test_2'
 
 
 def coverage_meta_xml():
@@ -40,6 +45,22 @@ def coverage_meta_xml():
     )
     coverageview_meta_info(builder, dict_meta)
     return builder
+
+def case_create_nc_store():
+    '''
+        创建 nc store
+    @return:
+    '''
+    coverage_store = 'nmefc_wind'
+    layer_name = 'ceshi_coverage_01'
+    file_path=r'file:nmefc/waterwind/nmefc_2016072112_opdr.nc'
+    cat: Catalog = Catalog(REST_URL, username="admin", password="geoserver")
+    # ws = Workspace(cat, WORK_SPACE)
+    # 创建 store 需要加入判断 store是否存在
+    coverage_nc_store= CoverageNcStore(cat,WORK_SPACE,coverage_store)
+    coverage_nc_store.create_nc_store(file_path)
+
+
 
 
 # def coverage_xml(ws: str, layer_name: str, store_name: str, bands: List[Dict[str, str]]):
@@ -382,14 +403,18 @@ def main():
     # TODO:[-] 20-03-23 下面暂时注释掉
     # create_nc_coverage()
     # TODO:[-] 20-03-23 case2: 开始实现基于 gsconfig 的 create_coverage
-    create_nc_coverage_merage_resource()
-    # TODO:[*] 20-03-26 case3: 测试 style 绑定
+    # create_nc_coverage_merage_resource()
+    # TODO:[-] 20-03-26 case3: 测试 style 绑定
 
     # TODO:[-] 20-03-30 case4: 测试将style绑定至指定layer
     layer_name = 'my_test_2:ceshi_coverage_01'
     coverage_title = 'ceshi_coverage_01'
     style_name = 'wind_dir_style'
     # bind_style_coverage(server_url, layer_name, style_name, coverage_title, work_space)
+
+    # TODO:[*] 20-03-30 case5:测试创建store
+    case_create_nc_store()
+
     pass
 
 
