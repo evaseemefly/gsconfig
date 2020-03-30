@@ -4,6 +4,7 @@ from catalog import Catalog
 from typing import List, Dict
 from mid_model import CoverageDimensionMidModel
 from support import coverageview_xml
+from common import LayerError, GeoServerError
 
 
 class CoverageLayer:
@@ -21,7 +22,9 @@ class CoverageLayer:
             eg: http://localhost:8082/geoserver/rest/workspaces/Searchrescue/coveragestores/nmefc_wind_dir_xy/coverages
             对比:http://localhost:8082/geoserver/rest/workspaces/my_test_2/coveragestores/nmefc_wind/coverages
         '''
-        return f'http://localhost:8080/geoserver/rest/workspaces/{self.work_space}/coveragestores/{self.store_name}/coverages'
+        if self.catalog is not None:
+            return f'{self.catalog.service_url}/workspaces/{self.work_space}/coveragestores/{self.store_name}/coverages'
+        return None
 
     @property
     def msg(self):
@@ -97,8 +100,8 @@ class CoverageLayer:
         )
     )
 
-    def create_layer(self, layer_name: str, store_name: str, title: str, bands: List[Dict[str, str]] = []):
-
+    def _create_layer(self, layer_name: str, store_name: str, title: str, bands: List[Dict[str, str]] = []):
+        is_do = False
         # TODO:[*] 20-03-24 注意若存在指定的 layer 需要有处理，目前是直接返回None，在外侧处理
         if self.check_exist_layer(layer_name) is None:
             if self.check_store(store_name):
@@ -132,8 +135,16 @@ class CoverageLayer:
                     # print(i, v)
                     pass
                 # print(self.dict_meta)
-                self._generate_coverage_dict(layer_name, store_name, layer_name, layer_name, bands)
-                pass
+                try:
+                    self._generate_coverage_dict(layer_name, store_name, layer_name, layer_name, bands)
+                    is_do = True
+                except Exception as ex:
+                    is_do = False
+                    raise
+        else:
+            raise LayerError(layer_name)
+            # raise
+        return is_do
 
     def _generate_coverage_dict(self, layer_name: str, store_name: str, title: str = None, native_name: str = None,
                                 dimensions: List[Dict] = [],
@@ -141,35 +152,38 @@ class CoverageLayer:
         '''
             动态生成 dict_coverage 字典 (all)
         '''
-        if title is None:
-            title = layer_name
-        if native_name is None:
-            native_name = layer_name
-        # dict_coverage -> name
-        self.dict_coverage.update({'name': layer_name})
-        # dict_coverage -> nativeName
-        self.dict_coverage.update({'nativeName': native_name})
-        # dict_coverage -> namespace
-        self.dict_coverage.update({'namespace': dict(
-            name=self.work_space,
-            atom=self.work_space
-        )})
-        # dict_coverage -> nativeCoverageName
-        self.dict_coverage.update({
-            'nativeCoverageName': native_name
-        })
-        # dict_coverage -> store
-        self.dict_coverage.update({
-            'store': dict(
-                classname='coverageStore',
-                name=f'{self.work_space}:{store_name}'
-            )
-        })
+        try:
+            if title is None:
+                title = layer_name
+            if native_name is None:
+                native_name = layer_name
+            # dict_coverage -> name
+            self.dict_coverage.update({'name': layer_name})
+            # dict_coverage -> nativeName
+            self.dict_coverage.update({'nativeName': native_name})
+            # dict_coverage -> namespace
+            self.dict_coverage.update({'namespace': dict(
+                name=self.work_space,
+                atom=self.work_space
+            )})
+            # dict_coverage -> nativeCoverageName
+            self.dict_coverage.update({
+                'nativeCoverageName': native_name
+            })
+            # dict_coverage -> store
+            self.dict_coverage.update({
+                'store': dict(
+                    classname='coverageStore',
+                    name=f'{self.work_space}:{store_name}'
+                )
+            })
 
-        # dict_coverage -> metadata
-        self._update_metadata(native_name)
-        # dict_coverage -> dimensions
-        self._update_dimensions(dimensions)
+            # dict_coverage -> metadata
+            self._update_metadata(native_name)
+            # dict_coverage -> dimensions
+            self._update_dimensions(dimensions)
+        except Exception as ex:
+            raise
 
     def _update_metadata(self, coverage_name: str):
         '''
@@ -231,13 +245,15 @@ class CoverageLayer:
             发布 layer
         '''
         headers_xml = {'content-type': 'text/xml'}
-        self.create_layer(layer_name, self.store_name, title if title else layer_name, bands)
+        try:
+            if self._create_layer(layer_name, self.store_name, title if title else layer_name, bands):
+                '''
+                     NOTE: 错误汇总:
+                        1- 400错误:No such layer: nmefc_wind
+                '''
 
-        '''
-             NOTE: 错误汇总:
-                1- 400错误:No such layer: nmefc_wind
-        '''
-
-        response = requests.post(self.href, auth=('admin', 'geoserver'), data=self.msg, headers=headers_xml)
-        if response.status_code in [200, 201]:
-            return response
+                response = requests.post(self.href, auth=('admin', 'geoserver'), data=self.msg, headers=headers_xml)
+                if response.status_code in [200, 201]:
+                    return response
+        except LayerError as layerErr:
+            print(f'已经存在重名的layer:{layerErr.title}')

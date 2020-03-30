@@ -339,7 +339,7 @@ def create_nc_coverage_merage_resource():
     coverage_store = 'nmefc_wind'
     layer_name = 'ceshi_coverage_01'
     work_space = 'my_test_2'
-    cat: Catalog = Catalog("http://localhost:8080/geoserver/rest", username="admin", password="geoserver")
+    cat: Catalog = Catalog("http://localhost:8082/geoserver/rest", username="admin", password="geoserver")
     ws = Workspace(cat, work_space)
     store = CoverageStore(cat, ws, 'nmefc_wind_dir_xy')
 
@@ -369,7 +369,7 @@ def bind_style_coverage(server_url: str, layer_name: str, style_name: str, cover
 
 
 def main():
-    server_url = 'http://localhost:8080/geoserver/rest'
+    server_url = 'http://localhost:8082/geoserver/rest'
     work_space = 'my_test_2'
     builder = coverage_xml()
     # create_nc_layer()
@@ -382,12 +382,14 @@ def main():
     # TODO:[-] 20-03-23 下面暂时注释掉
     # create_nc_coverage()
     # TODO:[-] 20-03-23 case2: 开始实现基于 gsconfig 的 create_coverage
-    # create_nc_coverage_merage_resource()
+    create_nc_coverage_merage_resource()
     # TODO:[*] 20-03-26 case3: 测试 style 绑定
+
+    # TODO:[-] 20-03-30 case4: 测试将style绑定至指定layer
     layer_name = 'my_test_2:ceshi_coverage_01'
     coverage_title = 'ceshi_coverage_01'
     style_name = 'wind_dir_style'
-    bind_style_coverage(server_url, layer_name, style_name, coverage_title, work_space)
+    # bind_style_coverage(server_url, layer_name, style_name, coverage_title, work_space)
     pass
 
 
