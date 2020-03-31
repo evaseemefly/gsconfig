@@ -17,10 +17,13 @@ class CoverageNcStore(BaseCatalog):
         '''
             创建指定 nc store
         @param path:nc store的相对存储路径
-        @return:
+        @return: is_ok: 是否创建成功
         '''
+        is_ok = False
         # 需要先判断是否存在指定的 store
         if self.cat.get_store(self.store_name, self.work_space) is None:
             self.cat.create_coverageNCstore(self.store_name, self.work_space, create_layer=False, path=path)
+            is_ok = True
         else:
             pass
+        return is_ok

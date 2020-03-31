@@ -6,3 +6,8 @@ include/
 lib/
 lib64
 doc/_build/
+/src/geoserver/.idea/geoserver.iml
+/src/geoserver/.idea/inspectionProfiles/profiles_settings.xml
+/src/geoserver/.idea/misc.xml
+/src/geoserver/.idea/modules.xml
+/src/geoserver/.idea/vcs.xml

@@ -5,6 +5,7 @@ from geoserver.catalog import Catalog
 #     def __init__(self):
 from geoserver.catalog import Catalog
 import os
+from customer_base import BaseCatalog
 
 # 样式文件默认存储的路径
 SLD_SRC = r'D:\GeoServer 2.13.0\data_dir\styles'
@@ -13,6 +14,7 @@ SLD_SRC = r'D:\GeoServer 2.13.0\data_dir\styles'
 def bind_layer_style(cat: Catalog, layer_name: str, style_name: str, coverage_title: str, work_space: str):
     '''
         将 layer 绑定指定的 style ,暂时不放在 class中
+        TODO:[*] 20-03-31 此部分与 cwb 的 LayerStyle 需要整合，暂时不再修改
     @param cat:
     @param layer_name:
     @param style_name:
@@ -20,6 +22,7 @@ def bind_layer_style(cat: Catalog, layer_name: str, style_name: str, coverage_ti
     @param work_space:
     @return:
     '''
+    is_ok = False
     if check_style(cat, style_name, work_space) is not None:
         headers_xml = {'content-type': 'text/xml'}
         json_data = f'''
@@ -40,16 +43,38 @@ def bind_layer_style(cat: Catalog, layer_name: str, style_name: str, coverage_ti
         pass
         # print(response)
 
+
 def check_style(cat: Catalog, style_name: str, work_space_name: str):
     '''
         判断指定工作区下是否包含指定的 style
     '''
     # cat.get_styles()
     # TODO:[-] 20-03-30 注意需要加入 ws，否则会报错
-    return cat.get_style(style_name, work_space_name)
+    temp_style = cat.get_style(style_name, work_space_name)
+    return temp_style
 
 
-class LayerStyle:
+class BaseStyle(BaseCatalog):
+    '''
+        20-03-31 + 新加入的 继承自 BaseCatalog的 父类样式 ，需要由具体实现 style 继承
+    '''
+
+    def __init__(self, cat: Catalog, work_space_name: str):
+        super().__init__(cat, work_space_name)
+        # self.cat = cat
+        # self.work_space_name = work_space_name
+
+    def check_style(self, style_name: str):
+        '''
+            检查 指定 -> ws -> style 是否存在
+        @param style_name: 样式 名称
+        @return:
+        '''
+        temp_style = self.cat.get_style(style_name, self.work_space)
+        return temp_style
+
+
+class LayerStyle(BaseStyle):
     def __init__(self, catalog: Catalog, work_space: str, layer_name: str):
         '''
         初始化LayerStyle类
@@ -57,8 +82,9 @@ class LayerStyle:
         :param work_space: 需要绑定Layer的工作区
         :param layer_name: 需要绑定Style的Layer
         '''
-        self.catalog = catalog
-        self.work_space = work_space
+        super().__init__(catalog, work_space)
+        # self.catalog = catalog
+        # self.work_space = work_space
         self.layer_name = layer_name
 
     def has_the_style(self, layer, style_name: str):
@@ -97,6 +123,35 @@ class LayerStyle:
                         self.catalog.save(layer)
                         return layer
         return None
+
+    def bind_layer_style(self, style_name: str, coverage_title: str):
+        '''
+            TODO:[-] 20-03-31 + 添加至 layer_style中
+        @param style_name:
+        @param coverage_title:
+        @return:
+        '''
+        is_ok = False
+        if self.check_style(style_name) is not None:
+            headers_xml = {'content-type': 'text/xml'}
+            json_data = f'''
+                            <layer>
+                                    <defaultStyle>
+                                        <name>{style_name}</name>
+                                    </defaultStyle>
+                                </layer>
+                           '''
+            # 'http://localhost:8080/geoserver/rest//workspaces/my_test_2/layers/ceshi_coverage_01'
+            # TODO:[-] 20-03-26 注意此部分需要去掉工作区(之前是要包含工作区的),03-30 更新，修改版本为 2.15.1
+            url_style = f'{self.cat.service_url}/workspaces/{self.work_space.name}/layers/{coverage_title}'
+            response = requests.put(
+                url_style,
+                auth=(self.cat.username, self.cat.password),
+                data=json_data,
+                headers=headers_xml)
+            if response.status_code in [200, 201]:
+                is_ok = True
+        return is_ok
 
 
 def main():

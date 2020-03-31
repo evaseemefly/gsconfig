@@ -1,4 +1,4 @@
-import os,sys
+import os, sys
 import requests
 # print(sys.path)
 
@@ -12,14 +12,14 @@ from xml.etree.ElementTree import TreeBuilder, tostring, XMLParser
 # 新加入的mid model
 from mid_model import CoverageDimensionMidModel
 from customer_layer import CoverageLayer
-from customer_style import bind_layer_style
+from customer_style import bind_layer_style, LayerStyle
 from customer_store import CoverageNcStore
 
 from typing import List, Dict
 
-REST_URL='http://localhost:8082/geoserver/rest'
-STORE_NAME='nmefc_2016072112_opdr_test_1'
-WORK_SPACE='my_test_2'
+REST_URL = 'http://localhost:8082/geoserver/rest'
+STORE_NAME = 'nmefc_2016072112_opdr_test_1'
+WORK_SPACE = 'my_test_2'
 
 
 def coverage_meta_xml():
@@ -46,21 +46,22 @@ def coverage_meta_xml():
     coverageview_meta_info(builder, dict_meta)
     return builder
 
+
 def case_create_nc_store():
     '''
+        创建 nc store 的测试 case
         创建 nc store
     @return:
     '''
     coverage_store = 'nmefc_wind'
     layer_name = 'ceshi_coverage_01'
-    file_path=r'file:nmefc/waterwind/nmefc_2016072112_opdr.nc'
+    file_path = r'file:nmefc/waterwind/nmefc_2016072112_opdr.nc'
     cat: Catalog = Catalog(REST_URL, username="admin", password="geoserver")
     # ws = Workspace(cat, WORK_SPACE)
     # 创建 store 需要加入判断 store是否存在
-    coverage_nc_store= CoverageNcStore(cat,WORK_SPACE,coverage_store)
-    coverage_nc_store.create_nc_store(file_path)
-
-
+    coverage_nc_store = CoverageNcStore(cat, WORK_SPACE, coverage_store)
+    is_ok = coverage_nc_store.create_nc_store(file_path)
+    pass
 
 
 # def coverage_xml(ws: str, layer_name: str, store_name: str, bands: List[Dict[str, str]]):
@@ -380,13 +381,18 @@ def create_nc_coverage_merage_resource():
     pass
 
 
-def bind_style_coverage(server_url: str, layer_name: str, style_name: str, coverage_title: str, work_space: str):
+def case_bind_style_coverage(server_url: str, layer_name: str, style_name: str, coverage_title: str, work_space: str):
     '''
         将 已经存在的 style 与 已经发布的 coverage 进行绑定
     '''
 
     cat = Catalog(server_url, username='admin', password='geoserver')
-    bind_layer_style(cat, layer_name, style_name, coverage_title, work_space)
+    # 使用 20-03-31 的新的方式实现
+    # bind_layer_style(cat, layer_name, style_name, coverage_title, work_space)
+    # TODO:[-] 20-03-31 此处已重新修改至 layer_style 中
+    layer_style = LayerStyle(cat, work_space, layer_name)
+    is_ok = layer_style.bind_layer_style(style_name, coverage_title)
+    pass
 
 
 def main():
@@ -407,13 +413,14 @@ def main():
     # TODO:[-] 20-03-26 case3: 测试 style 绑定
 
     # TODO:[-] 20-03-30 case4: 测试将style绑定至指定layer
+    # 20-03-31 重新做了修改
     layer_name = 'my_test_2:ceshi_coverage_01'
     coverage_title = 'ceshi_coverage_01'
     style_name = 'wind_dir_style'
-    # bind_style_coverage(server_url, layer_name, style_name, coverage_title, work_space)
+    case_bind_style_coverage(server_url, layer_name, style_name, coverage_title, work_space)
 
-    # TODO:[*] 20-03-30 case5:测试创建store
-    case_create_nc_store()
+    # TODO:[-] 20-03-30 case5:测试创建store ok
+    # case_create_nc_store()
 
     pass
 

@@ -1,5 +1,7 @@
 from catalog import Catalog
-from workspace import Workspace
+# TODO:[-] 20-03-31 注意此处存在一个问题，由于修改了 gsconfig的源码，所以此处引用时是引用的系统环境中的 gsconfig(geoserver)
+from geoserver.workspace import Workspace
+# from workspace import Workspace
 
 class BaseCatalog:
     '''
